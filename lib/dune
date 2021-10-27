@@ -1,0 +1,23 @@
+; Worker library
+
+(library
+ (name worker)
+ (modules worker uTop_complete uTop_lexer uTop_token uTop)
+ (libraries
+  js_top_worker_rpc
+  js_of_ocaml-toplevel
+  js_of_ocaml-compiler
+  astring
+  )
+ (preprocess
+  (per_module
+   ((action
+     (run %{bin:cppo} -V OCAML:%{ocaml_version} %{input-file}))
+    uTop_complete
+    uTop)
+   ((pps js_of_ocaml-ppx)
+    worker))))
+
+(ocamllex uTop_lexer)
+
+
