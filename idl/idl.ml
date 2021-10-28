@@ -1,3 +1,4 @@
+let logfn = ref (fun (_ : string) -> ())
 module Param = struct
   type 'a t =
     { name : string option
@@ -283,7 +284,14 @@ module Make (M : MONAD) = struct
     fun call ->
       let fn =
         try Hashtbl.find impl call.Rpc.name with
-        | Not_found -> raise (UnknownMethod call.Rpc.name)
+        | Not_found ->
+          !logfn "1";
+          Hashtbl.iter (fun key _ -> !logfn ("method: " ^ key ^ (Hashtbl.hash key |> string_of_int)); !logfn key) impl;
+          let _h = Hashtbl.hash call.Rpc.name in
+
+          !logfn (Printf.sprintf "Unknown method: %s %d" call.Rpc.name (Hashtbl.hash call.Rpc.name));
+          !logfn call.Rpc.name;
+          raise (UnknownMethod call.Rpc.name)
       in
       fn call
 
@@ -572,7 +580,11 @@ module Exn = struct
     fun call ->
       let fn =
         try Hashtbl.find impl call.Rpc.name with
-        | Not_found -> raise (UnknownMethod call.Rpc.name)
+        | Not_found ->
+          !logfn "2";
+          Hashtbl.iter (fun key _ -> !logfn ("method: " ^ key)) impl;
+          !logfn (Printf.sprintf "Unknown method: %s" call.Rpc.name);
+          raise (UnknownMethod call.Rpc.name)
       in
       fn call
 

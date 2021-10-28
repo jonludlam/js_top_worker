@@ -5,15 +5,15 @@ authors: "various"
 license: "ISC"
 depends: [
   "ocaml"
-  "js_of_ocaml" {>= "3.11.0"}
+  "ppx_deriving_rpc"
   "rresult"
 ]
 build : [
   ["dune" "subst"] {pinned}
   ["dune" "build" "-p" name "-j" jobs]
 ]
-synopsis: "JS Toplevel worker"
+synopsis: "JS Toplevel worker IDL generator"
 description: """
-An OCaml toplevel designed to run as a web worker
+An OCaml toplevel designed to run as a web worker: IDL generator edition
 """
 

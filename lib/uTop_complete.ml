@@ -254,7 +254,7 @@ let parse_label tokens =
    | Directive listing                                               |
    +-----------------------------------------------------------------+ *)
 
-let list_directives phrase_terminator =
+let[@alert "-deprecated"] list_directives phrase_terminator =
   String_map.bindings
     (Hashtbl.fold
        (fun dir kind map ->
@@ -1005,7 +1005,7 @@ let complete ~phrase_terminator ~input =
     (* Generic completion on directives. *)
     | [(Symbol "#", _); ((Lident dir | Uident dir), _); (Blanks, { idx2 = stop })] ->
         (stop,
-         match try Some (Hashtbl.find Toploop.directive_table dir) with Not_found -> None with
+         match[@alert "-deprecated"] try Some (Hashtbl.find Toploop.directive_table dir) with Not_found -> None with
            | Some (Toploop.Directive_none _) -> [(phrase_terminator, "")]
            | Some (Toploop.Directive_string _) -> [(" \"", "")]
            | Some (Toploop.Directive_bool _) -> [(true_name, phrase_terminator); (false_name, phrase_terminator)]
@@ -1013,7 +1013,7 @@ let complete ~phrase_terminator ~input =
            | Some (Toploop.Directive_ident _) -> List.map (fun w -> (w, "")) (String_set.elements (global_names ()))
            | None -> [])
     | (Symbol "#", _) :: ((Lident dir | Uident dir), _) :: tokens -> begin
-         match try Some (Hashtbl.find Toploop.directive_table dir) with Not_found -> None with
+         match[@alert "-deprecated"] try Some (Hashtbl.find Toploop.directive_table dir) with Not_found -> None with
           | Some (Toploop.Directive_none _) ->
               (0, [])
           | Some (Toploop.Directive_string _) ->

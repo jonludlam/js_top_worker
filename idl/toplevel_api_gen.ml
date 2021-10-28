@@ -13,7 +13,7 @@
     transparent_modules = false;
     unboxed_types = false;
     unsafe_string = false;
-    cookies = [("library-name", "js_top_worker_rpc_dummy")]
+    cookies = [("library-name", "js_top_worker_rpc_def")]
   }]
 [@@@ocaml.text " IDL for talking to the toplevel webworker "]
 open Rpc

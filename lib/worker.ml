@@ -164,14 +164,17 @@ let complete phrase =
   IdlM.ErrM.return Toplevel_api_gen.{ n; completions }
 
 let server process e =
-  let call : Rpc.call = e in
-  M.bind (process call) (fun response -> Js_of_ocaml.Worker.post_message (response : Rpc.response));
+  let call : Rpc.call = Marshal.from_bytes e 0 in
+  M.bind (process call) (fun response -> Js_of_ocaml.Worker.post_message (Marshal.to_string response []));
   ()
 
-let run () =
+let run files =
   (* Here we bind the server stub functions to the implementations *)
+  Js_top_worker_rpc.Idl.logfn := (fun s -> Js_of_ocaml.(Firebug.console##log ( s)));
+  Clflags.no_check_prims := true;
   Server.complete complete;
   Server.exec execute;
   Server.setup setup;
   let rpc_fn = IdlM.server Server.implementation in
+  Js_of_ocaml.Worker.import_scripts files;
   Js_of_ocaml.Worker.set_onmessage (server rpc_fn)
