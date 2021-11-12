@@ -17,8 +17,7 @@ module Version = struct
         if cur - beg > 0 then [ String.sub p beg (cur - beg) ] else []
       else if sep p.[cur] then
         String.sub p beg (cur - beg) :: split (cur + 1) (cur + 1)
-      else
-        split beg (cur + 1)
+      else split beg (cur + 1)
     in
     split 0 0
 
@@ -26,29 +25,23 @@ module Version = struct
     match
       split_char ~sep:(function '+' | '-' | '~' -> true | _ -> false) v
     with
-    | [] ->
-      assert false
+    | [] -> assert false
     | x :: _ ->
-      List.map
-        int_of_string
-        (split_char ~sep:(function '.' -> true | _ -> false) x)
+        List.map int_of_string
+          (split_char ~sep:(function '.' -> true | _ -> false) x)
 
   let current = split Sys.ocaml_version
 
   let compint (a : int) b = compare a b
 
   let rec compare v v' =
-    match v, v' with
-    | [ x ], [ y ] ->
-      compint x y
-    | [], [] ->
-      0
-    | [], y :: _ ->
-      compint 0 y
-    | x :: _, [] ->
-      compint x 0
-    | x :: xs, y :: ys ->
-      (match compint x y with 0 -> compare xs ys | n -> n)
+    match (v, v') with
+    | [ x ], [ y ] -> compint x y
+    | [], [] -> 0
+    | [], y :: _ -> compint 0 y
+    | x :: _, [] -> compint x 0
+    | x :: xs, y :: ys -> (
+        match compint x y with 0 -> compare xs ys | n -> n)
 end
 
 let exec' s =
@@ -62,16 +55,14 @@ let setup functions () =
   if Version.compare Version.current [ 4; 07 ] >= 0 then exec' "open Stdlib";
   let header1 = Printf.sprintf "        %s version %%s" "OCaml" in
   let header2 =
-    Printf.sprintf
-      "     Compiled with Js_of_ocaml version %s"
+    Printf.sprintf "     Compiled with Js_of_ocaml version %s"
       Js_of_ocaml.Sys_js.js_of_ocaml_version
   in
   exec' (Printf.sprintf "Format.printf \"%s@.\" Sys.ocaml_version;;" header1);
   exec' (Printf.sprintf "Format.printf \"%s@.\";;" header2);
   exec' "#enable \"pretty\";;";
   exec' "#disable \"shortvar\";;";
-  Toploop.add_directive
-    "load_js"
+  Toploop.add_directive "load_js"
     (Toploop.Directive_string
        (fun name -> Js_of_ocaml.Js.Unsafe.global##load_script_ name))
     Toploop.{ section = ""; doc = "Load a javascript script" };
@@ -80,8 +71,7 @@ let setup functions () =
 
 let setup_printers () =
   exec' "let _print_unit fmt (_ : 'a) : 'a = Format.pp_print_string fmt \"()\"";
-  Topdirs.dir_install_printer
-    Format.std_formatter
+  Topdirs.dir_install_printer Format.std_formatter
     Longident.(Lident "_print_unit")
 
 let stdout_buff = Buffer.create 100
@@ -123,26 +113,97 @@ let execute =
     Format.pp_print_flush pp_result ();
     IdlM.ErrM.return
       Toplevel_api_gen.
-        { stdout = buff_opt stdout_buff
-        ; stderr = buff_opt stderr_buff
-        ; sharp_ppf = buff_opt code_buff
-        ; caml_ppf = buff_opt res_buff
-        ; highlight = !highlighted
+        {
+          stdout = buff_opt stdout_buff;
+          stderr = buff_opt stderr_buff;
+          sharp_ppf = buff_opt code_buff;
+          caml_ppf = buff_opt res_buff;
+          highlight = !highlighted;
         }
 
-let setup functions () =
+let sync_get url =
+  let open Js_of_ocaml in
+  let x = XmlHttpRequest.create () in
+  x##.responseType := Js.string "arraybuffer";
+  x##_open (Js.string "GET") (Js.string url) Js._false;
+  x##send Js.null;
+  match x##.status with
+  | 200 ->
+      Js.Opt.case
+        (File.CoerceTo.arrayBuffer x##.response)
+        (fun () ->
+          Firebug.console##log (Js.string "Failed to receive file");
+          None)
+        (fun b -> Some (Typed_array.String.of_arrayBuffer b))
+  | _ -> None
+
+let load_resource files =
+  let open Js_of_ocaml in
+  fun ~prefix ~path ->
+    Firebug.console##log
+      (Js.string
+         (Printf.sprintf "here we are, loading prefix=%s path=%s" prefix path));
+    (* let abs_filename = Filename.concat prefix path in *)
+    if List.mem_assoc path files then (
+      Firebug.console##log (Js.string "path is in files");
+      let f = sync_get (List.assoc path files) in
+      match f with
+      | Some content ->
+          Firebug.console##log
+            (Js.string
+               (Printf.sprintf "Got result (length=%d)" (String.length content)));
+          (* Sys_js.update_file ~name:abs_filename ~content; *)
+          Some content
+      | None -> None)
+    else (
+      Firebug.console##log (Js.string "path is NOT in files");
+      None)
+
+let functions : (unit -> unit) list option ref = ref None
+
+let init cmas cmis =
+  let open Js_of_ocaml in
   try
-    Js_of_ocaml.Sys_js.set_channel_flusher stdout (Buffer.add_string stdout_buff);
-    Js_of_ocaml.Sys_js.set_channel_flusher stderr (Buffer.add_string stderr_buff);
-    setup functions ();
+    Clflags.no_check_prims := true;
+    let cmi_files = List.map (fun cmi -> (Filename.basename cmi, cmi)) cmis in
+    Sys_js.mount ~path:"/dynamic/cmis" (load_resource cmi_files);
+    List.iter
+      (fun (path, _) -> Sys_js.register_lazy ("/dynamic/cmis/" ^ path))
+      cmi_files;
+    Topdirs.dir_directory "/dynamic/cmis";
+    Js_of_ocaml.Worker.import_scripts (List.map fst cmas);
+    functions :=
+      Some
+        (List.map
+           (fun func_name ->
+             Firebug.console##log (Js.string ("Function: " ^ func_name));
+             let func = Js.Unsafe.js_expr func_name in
+             fun () ->
+               Js.Unsafe.fun_call func [| Js.Unsafe.inject Dom_html.window |])
+           (List.map snd cmas));
+    IdlM.ErrM.return ()
+  with e ->
+    IdlM.ErrM.return_err (Toplevel_api_gen.InternalError (Printexc.to_string e))
+
+let setup () =
+  let open Js_of_ocaml in
+  try
+    Sys_js.set_channel_flusher stdout
+      (Buffer.add_string stdout_buff);
+    Sys_js.set_channel_flusher stderr
+      (Buffer.add_string stderr_buff);
+    (match !functions with
+    | Some l -> setup l ()
+    | None -> failwith "Error: toplevel has not been initialised");
     setup_printers ();
     IdlM.ErrM.return
       Toplevel_api_gen.
-        { stdout = buff_opt stdout_buff
-        ; stderr = buff_opt stderr_buff
-        ; sharp_ppf = None
-        ; caml_ppf = None
-        ; highlight = None
+        {
+          stdout = buff_opt stdout_buff;
+          stderr = buff_opt stderr_buff;
+          sharp_ppf = None;
+          caml_ppf = None;
+          highlight = None;
         }
   with e ->
     IdlM.ErrM.return_err (Toplevel_api_gen.InternalError (Printexc.to_string e))
@@ -151,12 +212,9 @@ let complete phrase =
   let contains_double_underscore s =
     let len = String.length s in
     let rec aux i =
-      if i > len - 2 then
-        false
-      else if s.[i] = '_' && s.[i + 1] = '_' then
-        true
-      else
-        aux (i + 1)
+      if i > len - 2 then false
+      else if s.[i] = '_' && s.[i + 1] = '_' then true
+      else aux (i + 1)
     in
     aux 0
   in
@@ -169,71 +227,22 @@ let complete phrase =
 
 let server process e =
   let call : Rpc.call = Marshal.from_bytes e 0 in
-  M.bind (process call) (fun response -> Js_of_ocaml.Worker.post_message (Marshal.to_string response []));
+  M.bind (process call) (fun response ->
+      Js_of_ocaml.Worker.post_message (Marshal.to_string response []));
   ()
 
-  let sync_get url =
-    let open Js_of_ocaml in
-    let x = XmlHttpRequest.create () in
-    x##.responseType := (Js.string "arraybuffer");
-    x##_open (Js.string "GET") (Js.string url) Js._false;
-    x##send Js.null;
-    match x##.status with
-    | 200 ->
-      Js.Opt.case
-        (File.CoerceTo.arrayBuffer x##.response)
-        (fun () ->
-          Firebug.console##log (Js.string "Failed to receive file");
-          None)
-        (fun b ->
-          Some (Typed_array.String.of_arrayBuffer b))
-    | _ ->
-      None
-
-let load_resource files =
-  let open Js_of_ocaml in
-  fun ~prefix ~path ->
-    Firebug.console##log (Js.string (Printf.sprintf "here we are, loading prefix=%s path=%s" prefix path));
-    (* let abs_filename = Filename.concat prefix path in *)
-    if List.mem_assoc path files
-    then begin
-      Firebug.console##log (Js.string "path is in files");
-      let f = sync_get (List.assoc path files) in
-      match f with
-      | Some content ->
-        Firebug.console##log (Js.string (Printf.sprintf "Got result (length=%d)" (String.length content)));
-        (* Sys_js.update_file ~name:abs_filename ~content; *)
-        Some content
-      | None -> 
-        None
-      end
-    else
-      (Firebug.console##log (Js.string "path is NOT in files");
-      None)
-
-let run files cmis functions =
+let run () =
   (* Here we bind the server stub functions to the implementations *)
   let open Js_of_ocaml in
   try
-    Js_top_worker_rpc.Idl.logfn := (fun s -> Js_of_ocaml.(Firebug.console##log ( s)));
-    ignore cmis;
-    Clflags.no_check_prims := true;
-    let cmi_files = List.map (fun cmi ->
-      (Filename.basename cmi, cmi)) cmis in
-    Sys_js.mount ~path:"/dynamic/cmis" (load_resource cmi_files);
-    List.iter (fun (path, _) -> Sys_js.register_lazy ("/dynamic/cmis/" ^ path)) cmi_files;
-    Topdirs.dir_directory "/dynamic/cmis";
-    Js_of_ocaml.Worker.import_scripts files;
-    let functions = List.map (fun func_name ->
-      Firebug.console##log (Js.string ("Function: " ^ func_name ));
-      let func = Js.Unsafe.js_expr func_name in
-      fun () -> Js.Unsafe.fun_call func [| Js.Unsafe.inject Dom_html.window |])
-      functions in
+    (Js_top_worker_rpc.Idl.logfn :=
+       fun s -> Js_of_ocaml.(Firebug.console##log s));
     Server.complete complete;
     Server.exec execute;
-    Server.setup (setup functions);
+    Server.setup setup;
+    Server.init init;
     let rpc_fn = IdlM.server Server.implementation in
     Js_of_ocaml.Worker.set_onmessage (server rpc_fn);
-    Firebug.console##log (Js.string "All finished");
-    with e ->
-      Firebug.console##log (Js.string ("Exception: " ^ Printexc.to_string e))
+    Firebug.console##log (Js.string "All finished")
+  with e ->
+    Firebug.console##log (Js.string ("Exception: " ^ Printexc.to_string e))

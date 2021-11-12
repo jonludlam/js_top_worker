@@ -22,7 +22,7 @@ type highlight = {
   line1: int ;
   line2: int ;
   col1: int ;
-  col2: int }[@@ocaml.doc " An area to be highlighted "][@@deriving rpcty]
+  col2: int }[@@deriving rpcty][@@ocaml.doc " An area to be highlighted "]
 include
   struct
     let _ = fun (_ : highlight) -> ()
@@ -122,9 +122,8 @@ type exec_result =
   stderr: string option ;
   sharp_ppf: string option ;
   caml_ppf: string option ;
-  highlight: highlight option }[@@ocaml.doc
-                                 " Represents the result of executing a toplevel phrase "]
-[@@deriving rpcty]
+  highlight: highlight option }[@@deriving rpcty][@@ocaml.doc
+                                                   " Represents the result of executing a toplevel phrase "]
 include
   struct
     let _ = fun (_ : exec_result) -> ()
@@ -254,7 +253,7 @@ type completion_result =
     [@ocaml.doc
       " The position in the input string from where the completions may be\n            inserted "];
   completions: string list [@ocaml.doc " The list of possible completions "]}
-[@@ocaml.doc " The result returned by a 'complete' call. "][@@deriving rpcty]
+[@@deriving rpcty][@@ocaml.doc " The result returned by a 'complete' call. "]
 include
   struct
     let _ = fun (_ : completion_result) -> ()
@@ -317,6 +316,38 @@ include
     and _ = completion_result_completions
     and _ = typ_of_completion_result
     and _ = completion_result
+  end[@@ocaml.doc "@inline"][@@merlin.hide ]
+type string_list = string list[@@deriving rpcty][@@ocaml.doc
+                                                  " Used by setup "]
+include
+  struct
+    let _ = fun (_ : string_list) -> ()
+    let rec typ_of_string_list =
+      Rpc.Types.List (let open Rpc.Types in Basic String)
+    and string_list =
+      {
+        Rpc.Types.name = "string_list";
+        Rpc.Types.description = ["Used by setup"];
+        Rpc.Types.ty = typ_of_string_list
+      }
+    let _ = typ_of_string_list
+    and _ = string_list
+  end[@@ocaml.doc "@inline"][@@merlin.hide ]
+type string_string_list = (string * string) list[@@deriving rpcty][@@ocaml.doc
+                                                                    " Used by setup "]
+include
+  struct
+    let _ = fun (_ : string_string_list) -> ()
+    let rec typ_of_string_string_list =
+      Rpc.Types.Dict (Rpc.Types.String, (let open Rpc.Types in Basic String))
+    and string_string_list =
+      {
+        Rpc.Types.name = "string_string_list";
+        Rpc.Types.description = ["Used by setup"];
+        Rpc.Types.ty = typ_of_string_string_list
+      }
+    let _ = typ_of_string_string_list
+    and _ = string_string_list
   end[@@ocaml.doc "@inline"][@@merlin.hide ]
 type err =
   | InternalError of string [@@ocaml.doc
@@ -391,10 +422,26 @@ module Make(R:RPC) =
     let phrase_p = Param.mk Types.string
     let exec_result_p = Param.mk exec_result
     let completion_p = Param.mk completion_result
+    let cmas =
+      Param.mk ~name:"cmas"
+        ~description:["A list of pairs. The first element of the pair is a urls to a";
+                     "cma file pre-compiled to javascript. The second item is the";
+                     "name of the function to be invoked to load the cma file";
+                     "(ie, the cma was compiled with --wrap-func).";
+                     "These will be loaded synchronously during the init call."]
+        string_string_list
+    let cmis =
+      Param.mk ~name:"cmis"
+        ~description:["A list of urls of cmi files. These files will be loaded on demand";
+                     "during evaluation of toplevel phrases."] string_list
+    let init =
+      declare "init" ["Initialise the toplevel."]
+        (cmas @-> (cmis @-> (returning unit_p err)))
     let setup =
       declare "setup"
-        ["Initialise the toplevel. Return value is the initial blurb ";
-        "printed when starting a toplevel."]
+        ["Start the toplevel. Return value is the initial blurb ";
+        "printed when starting a toplevel. Note that the toplevel";
+        "must be initialised first."]
         (unit_p @-> (returning exec_result_p err))
     let exec =
       declare "exec"

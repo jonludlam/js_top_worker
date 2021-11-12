@@ -15,8 +15,8 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 
-(** {2 Value} *)
 type msg = [ `Msg of string ]
+(** {2 Value} *)
 
 type t =
   | Int of int64
@@ -65,112 +65,146 @@ module Types : sig
     | Variant : 'a variant -> 'a typ
     | Abstract : 'a abstract -> 'a typ
 
-  and 'a def =
-    { name : string
-    ; description : string list
-    ; ty : 'a typ
-    }
+  and 'a def = { name : string; description : string list; ty : 'a typ }
 
   and boxed_def = BoxedDef : 'a def -> boxed_def
 
-  and ('a, 's) field =
-    { fname : string
-    ; fdescription : string list
-    ; fversion : Version.t option
-    ; field : 'a typ
-    ; fdefault : 'a option
-    ; fget : 's -> 'a
-    ; fset : 'a -> 's -> 's
-    }
+  and ('a, 's) field = {
+    fname : string;
+    fdescription : string list;
+    fversion : Version.t option;
+    field : 'a typ;
+    fdefault : 'a option;
+    fget : 's -> 'a;
+    fset : 'a -> 's -> 's;
+  }
 
   and 'a boxed_field = BoxedField : ('a, 's) field -> 's boxed_field
 
-  and field_getter =
-    { field_get : 'a. string -> 'a typ -> ('a, msg) result }
+  and field_getter = { field_get : 'a. string -> 'a typ -> ('a, msg) result }
 
-  and 'a structure =
-    { sname : string
-    ; fields : 'a boxed_field list
-    ; version : Version.t option
-    ; constructor : field_getter -> ('a, msg) result
-    }
+  and 'a structure = {
+    sname : string;
+    fields : 'a boxed_field list;
+    version : Version.t option;
+    constructor : field_getter -> ('a, msg) result;
+  }
 
-  and ('a, 's) tag =
-    { tname : string
-    ; tdescription : string list
-    ; tversion : Version.t option
-    ; tcontents : 'a typ
-    ; tpreview : 's -> 'a option
-    ; (* Prism *)
-      treview : 'a -> 's
-    }
+  and ('a, 's) tag = {
+    tname : string;
+    tdescription : string list;
+    tversion : Version.t option;
+    tcontents : 'a typ;
+    tpreview : 's -> 'a option;
+    (* Prism *)
+    treview : 'a -> 's;
+  }
 
   and 'a boxed_tag = BoxedTag : ('a, 's) tag -> 's boxed_tag
 
   and tag_getter = { tget : 'a. 'a typ -> ('a, msg) result }
 
-  and 'a variant =
-    { vname : string
-    ; variants : 'a boxed_tag list
-    ; vdefault : 'a option
-    ; vversion : Version.t option
-    ; vconstructor : string -> tag_getter -> ('a, msg) result
-    }
+  and 'a variant = {
+    vname : string;
+    variants : 'a boxed_tag list;
+    vdefault : 'a option;
+    vversion : Version.t option;
+    vconstructor : string -> tag_getter -> ('a, msg) result;
+  }
 
-  and 'a abstract =
-    { aname : string
-    ; test_data : 'a list
-    ; rpc_of : 'a -> t
-    ; of_rpc : t -> ('a, msg) result
-    }
+  and 'a abstract = {
+    aname : string;
+    test_data : 'a list;
+    rpc_of : 'a -> t;
+    of_rpc : t -> ('a, msg) result;
+  }
 
   val int : int def
+
   val int32 : int32 def
+
   val int64 : int64 def
+
   val bool : bool def
+
   val float : float def
+
   val string : string def
+
   val char : char def
+
   val unit : unit def
+
   val default_types : boxed_def list
 end
 
 (** {2 Basic constructors} *)
 
 val rpc_of_int64 : int64 -> t
+
 val rpc_of_int32 : int32 -> t
+
 val rpc_of_int : int -> t
+
 val rpc_of_bool : bool -> t
+
 val rpc_of_float : float -> t
+
 val rpc_of_string : string -> t
+
 val rpc_of_dateTime : string -> t
+
 val rpc_of_base64 : string -> t
+
 val rpc_of_t : t -> t
+
 val rpc_of_unit : unit -> t
+
 val rpc_of_char : char -> t
+
 val int64_of_rpc : t -> int64
+
 val int32_of_rpc : t -> int32
+
 val int_of_rpc : t -> int
+
 val bool_of_rpc : t -> bool
+
 val float_of_rpc : t -> float
+
 val string_of_rpc : t -> string
+
 val dateTime_of_rpc : t -> string
+
 val base64_of_rpc : t -> string
+
 val t_of_rpc : t -> t
+
 val char_of_rpc : t -> char
+
 val unit_of_rpc : t -> unit
 
 module ResultUnmarshallers : sig
   val int64_of_rpc : t -> (int64, msg) result
+
   val int32_of_rpc : t -> (int32, msg) result
+
   val int_of_rpc : t -> (int, msg) result
+
   val bool_of_rpc : t -> (bool, msg) result
+
   val float_of_rpc : t -> (float, msg) result
+
   val string_of_rpc : t -> (string, msg) result
+
   val dateTime_of_rpc : t -> (string, msg) result
+
   val base64_of_rpc : t -> (string, msg) result
+
   val t_of_rpc : t -> (t, msg) result
+
   val unit_of_rpc : t -> (unit, msg) result
+
   val char_of_rpc : t -> (char, msg) result
 end
 
@@ -178,43 +212,40 @@ end
 
 type callback = string list -> t -> unit
 
-type call =
-  { name : string
-  ; params : t list
-  ; is_notification : bool
-  }
+type call = { name : string; params : t list; is_notification : bool }
 
 val call : string -> t list -> call
+
 val notification : string -> t list -> call
+
 val string_of_call : call -> string
 
 (** {2 Responses} *)
 
-type response =
-  { success : bool
-  ; contents : t
-  ; is_notification : bool
-  }
+type response = { success : bool; contents : t; is_notification : bool }
 
 val string_of_response : response -> string
+
 val success : t -> response
+
 val failure : t -> response
 
 (** {2 Run-time errors} *)
 
 exception Runtime_error of string * t
+
 exception Runtime_exception of string * string
 
-(** {2 Debug options} *)
 val set_debug : bool -> unit
+(** {2 Debug options} *)
 
 val get_debug : unit -> bool
 
-(** Helper *)
 val lowerfn : t -> t
+(** Helper *)
 
+val struct_extend : t -> t -> t
 (** [struct_extend rpc1 rpc2] first checks that [rpc1] and [rpc2] are both
  *  dictionaries. If this is the case then [struct_extend] will create a new
  *  [Rpc.t] which contains all key-value pairs from [rpc1], as well as all
  *  key-value pairs from [rpc2] for which the key does not exist in [rpc1]. *)
-val struct_extend : t -> t -> t
