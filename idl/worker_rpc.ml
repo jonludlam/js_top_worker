@@ -41,7 +41,7 @@ let rpc : context -> Rpc.call -> Rpc.response Lwt.t =
   let jv = Marshal.to_bytes call [] in
   let mv = Lwt_mvar.create_empty () in
   let outstanding_execution =
-    Brr.G.set_timeout ~ms:1000000 (fun () ->
+    Brr.G.set_timeout ~ms:1000 (fun () ->
         Lwt.async (fun () -> Lwt_mvar.put mv (Error Timeout));
         context.timeout_fn ())
   in
