@@ -5,6 +5,12 @@
  (libraries rresult))
 
 (library
+  (name js_top_worker_client)
+  (public_name js_top_worker.client)
+  (modules worker_rpc)
+  (libraries js_top_worker_rpc lwt brr))
+
+(library
  (name js_top_worker_rpc_def)
  (modules toplevel_api)
  (enabled_if
