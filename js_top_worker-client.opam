@@ -1,0 +1,23 @@
+version: "0.0.1"
+opam-version: "2.0"
+maintainer: "jon@recoil.org"
+authors: "various"
+license: "ISC"
+depends: [
+  "ocaml"
+  "js_of_ocaml" {>= "3.11.0"}
+  "rresult"
+  "astring"
+  "brr"
+]
+build : [
+  ["dune" "subst"] {pinned}
+  ["dune" "build" "-p" name "-j" jobs]
+]
+synopsis: "JS Toplevel worker client"
+description: """
+An OCaml toplevel designed to run as a web worker
+"""
+pin-depends: [
+  ["js_of_ocaml.3.11.0" "git+https://github.com/jonludlam/js_of_ocaml#lazy_files"]
+]
