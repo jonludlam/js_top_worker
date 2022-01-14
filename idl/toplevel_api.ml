@@ -39,7 +39,6 @@ module E = Idl.Error.Make (struct
   type t = err
 
   let t = err
-
   let internal_error_of e = Some (InternalError (Printexc.to_string e))
 end)
 
@@ -59,13 +58,9 @@ module Make (R : RPC) = struct
       }
 
   let implementation = implement description
-
   let unit_p = Param.mk Types.unit
-
   let phrase_p = Param.mk Types.string
-
   let exec_result_p = Param.mk exec_result
-
   let completion_p = Param.mk completion_result
 
   let cmas =

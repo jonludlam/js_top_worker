@@ -30,7 +30,6 @@ module Error = struct
     type t
 
     val t : t Rpc.Types.def
-
     val internal_error_of : exn -> t option
   end
 
@@ -67,21 +66,14 @@ end
 
 module type RPC = sig
   type implementation
-
   type 'a res
-
   type ('a, 'b) comp
-
   type _ fn
 
   val implement : Interface.description -> implementation
-
   val ( @-> ) : 'a Param.t -> 'b fn -> ('a -> 'b) fn
-
   val returning : 'a Param.t -> 'b Error.t -> ('a, 'b) comp fn
-
   val declare : string -> string list -> 'a fn -> 'a res
-
   val declare_notification : string -> string list -> 'a fn -> 'a res
 end
 
@@ -89,18 +81,13 @@ module type MONAD = sig
   type 'a t
 
   val return : 'a -> 'a t
-
   val bind : 'a t -> ('a -> 'b t) -> 'b t
-
   val fail : exn -> 'a t
 end
 
 exception MarshalError of string
-
 exception UnknownMethod of string
-
 exception UnboundImplementation of string list
-
 exception NoDescription
 
 let get_wire_name description name =
@@ -141,55 +128,37 @@ let get_arg call has_named name is_opt =
 module Make (M : MONAD) = struct
   module type RPCTRANSFORMER = sig
     type 'a box
-
     type ('a, 'b) resultb = ('a, 'b) result box
-
     type rpcfn = Rpc.call -> Rpc.response M.t
 
     val lift : ('a -> 'b M.t) -> 'a -> 'b box
-
     val bind : 'a box -> ('a -> 'b M.t) -> 'b box
-
     val return : 'a -> 'a box
-
     val get : 'a box -> 'a M.t
-
     val ( !@ ) : 'a box -> 'a M.t
-
     val put : 'a M.t -> 'a box
-
     val ( ~@ ) : 'a M.t -> 'a box
   end
 
   module T = struct
     type 'a box = { box : 'a M.t }
-
     type ('a, 'b) resultb = ('a, 'b) result box
-
     type rpcfn = Rpc.call -> Rpc.response M.t
 
     let lift f x = { box = f x }
-
     let bind { box = x } f = { box = M.bind x f }
-
     let return x = { box = M.return x }
-
     let get { box = x } = x
-
     let ( !@ ) = get
-
     let put x = { box = x }
-
     let ( ~@ ) = put
   end
 
   type client_implementation = unit
-
   type server_implementation = (string, T.rpcfn option) Hashtbl.t
 
   module ErrM : sig
     val return : 'a -> ('a, 'b) T.resultb
-
     val return_err : 'b -> ('a, 'b) T.resultb
 
     val checked_bind :
@@ -205,22 +174,18 @@ module Make (M : MONAD) = struct
       ('a, 'b) T.resultb -> ('a -> ('c, 'b) T.resultb) -> ('c, 'b) T.resultb
   end = struct
     let return x = T.put (M.return (Ok x))
-
     let return_err e = T.put (M.return (Error e))
 
     let checked_bind x f f1 =
       T.bind x T.(function Ok x -> !@(f x) | Error x -> !@(f1 x))
 
     let bind x f = checked_bind x f return_err
-
     let ( >>= ) x f = bind x f
   end
 
   module GenClient () = struct
     type implementation = client_implementation
-
     type 'a res = T.rpcfn -> 'a
-
     type ('a, 'b) comp = ('a, 'b) T.resultb
 
     type _ fn =
@@ -228,9 +193,7 @@ module Make (M : MONAD) = struct
       | Returning : ('a Param.t * 'b Error.t) -> ('a, 'b) comp fn
 
     let description = ref None
-
     let strict = ref false
-
     let make_strict () = strict := true
 
     let implement x =
@@ -238,7 +201,6 @@ module Make (M : MONAD) = struct
       ()
 
     let returning a err = Returning (a, err)
-
     let ( @-> ) t f = Function (t, f)
 
     let declare_ is_notification name _ ty (rpc : T.rpcfn) =
@@ -343,9 +305,7 @@ module Make (M : MONAD) = struct
 
   module GenServer () = struct
     type implementation = server_implementation
-
     type ('a, 'b) comp = ('a, 'b) T.resultb
-
     type 'a res = 'a -> unit
 
     type _ fn =
@@ -353,7 +313,6 @@ module Make (M : MONAD) = struct
       | Returning : ('a Param.t * 'b Error.t) -> ('a, 'b) comp fn
 
     let funcs = Hashtbl.create 20
-
     let description = ref None
 
     let implement x =
@@ -361,7 +320,6 @@ module Make (M : MONAD) = struct
       funcs
 
     let returning a b = Returning (a, b)
-
     let ( @-> ) t f = Function (t, f)
 
     let rec has_named_args : type a. a fn -> bool = function
@@ -423,7 +381,6 @@ module Make (M : MONAD) = struct
         Hashtbl.add funcs wire_name (Some rpcfn)
 
     let declare_notification name a ty = declare_ true name a ty
-
     let declare name a ty = declare_ false name a ty
   end
 end
@@ -432,15 +389,10 @@ module ExnM = struct
   type 'a t = V of 'a | E of exn
 
   let return x = V x
-
   let lift f x = match f x with y -> V y | exception e -> E e
-
   let bind x (f : 'a -> 'b t) : 'b t = match x with V x -> f x | E e -> E e
-
   let ( >>= ) = bind
-
   let fail e = E e
-
   let run = function V x -> x | E e -> raise e
 end
 
@@ -448,15 +400,10 @@ module IdM = struct
   type 'a t = T of 'a
 
   let return x = T x
-
   let lift f x = T (f x)
-
   let bind (T x) f = f x
-
   let ( >>= ) = bind
-
   let fail e = raise e
-
   let run (T x) = x
 end
 
@@ -517,9 +464,7 @@ end
 
 module Exn = struct
   type rpcfn = Rpc.call -> Rpc.response
-
   type client_implementation = unit
-
   type server_implementation = (string, rpcfn option) Hashtbl.t
 
   module GenClient (R : sig
@@ -527,9 +472,7 @@ module Exn = struct
   end) =
   struct
     type implementation = client_implementation
-
     type ('a, 'b) comp = 'a
-
     type 'a res = 'a
 
     type _ fn =
@@ -543,7 +486,6 @@ module Exn = struct
       ()
 
     let returning a err = Returning (a, err)
-
     let ( @-> ) t f = Function (t, f)
 
     let declare_ is_notification name _ ty =
@@ -595,7 +537,6 @@ module Exn = struct
       inner (None, []) ty
 
     let declare name a ty = declare_ false name a ty
-
     let declare_notification name a ty = declare_ true name a ty
   end
 
@@ -630,9 +571,7 @@ module Exn = struct
 
   module GenServer () = struct
     type implementation = server_implementation
-
     type ('a, 'b) comp = 'a
-
     type 'a res = 'a -> unit
 
     type _ fn =
@@ -640,7 +579,6 @@ module Exn = struct
       | Returning : ('a Param.t * 'b Error.t) -> ('a, _) comp fn
 
     let funcs = Hashtbl.create 20
-
     let description = ref None
 
     let implement x =
@@ -648,7 +586,6 @@ module Exn = struct
       funcs
 
     let returning a b = Returning (a, b)
-
     let ( @-> ) t f = Function (t, f)
 
     type boxed_error = BoxedError : 'a Error.t -> boxed_error
@@ -718,7 +655,6 @@ module Exn = struct
         Hashtbl.add funcs wire_name (Some rpcfn)
 
     let declare name a ty = declare_ true name a ty
-
     let declare_notification name a ty = declare_ false name a ty
   end
 end

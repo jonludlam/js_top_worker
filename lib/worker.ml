@@ -31,7 +31,6 @@ module Version = struct
           (split_char ~sep:(function '.' -> true | _ -> false) x)
 
   let current = split Sys.ocaml_version
-
   let compint (a : int) b = compare a b
 
   let rec compare v v' =
@@ -75,7 +74,6 @@ let setup_printers () =
     Longident.(Lident "_print_unit")
 
 let stdout_buff = Buffer.create 100
-
 let stderr_buff = Buffer.create 100
 
 (* RPC function implementations *)
@@ -83,7 +81,6 @@ let stderr_buff = Buffer.create 100
 module M = Idl.IdM (* Server is synchronous *)
 
 module IdlM = Idl.Make (M)
-
 module Server = Toplevel_api_gen.Make (IdlM.GenServer ())
 
 (* These are all required to return the appropriate value for the API within the
@@ -137,27 +134,43 @@ let sync_get url =
         (fun b -> Some (Typed_array.String.of_arrayBuffer b))
   | _ -> None
 
-let load_resource files =
-  let open Js_of_ocaml in
-  fun ~prefix ~path ->
-    Firebug.console##log
-      (Js.string
-         (Printf.sprintf "here we are, loading prefix=%s path=%s" prefix path));
-    (* let abs_filename = Filename.concat prefix path in *)
-    if List.mem_assoc path files then (
-      Firebug.console##log (Js.string "path is in files");
-      let f = sync_get (List.assoc path files) in
-      match f with
-      | Some content ->
-          Firebug.console##log
-            (Js.string
-               (Printf.sprintf "Got result (length=%d)" (String.length content)));
-          (* Sys_js.update_file ~name:abs_filename ~content; *)
-          Some content
-      | None -> None)
-    else (
-      Firebug.console##log (Js.string "path is NOT in files");
-      None)
+type signature = Types.signature_item list
+type flags = Cmi_format.pers_flags list
+type header = Misc.modname * signature
+
+(** The following two functions are taken from cmi_format.ml in
+    the compiler, but changed to work on bytes rather than input
+    channels *)
+let input_cmi str =
+  let offset = 0 in
+  let (name, sign) = (Marshal.from_bytes str offset : header) in
+  let offset = offset + Marshal.total_size str offset in
+  let crcs = (Marshal.from_bytes str offset : Misc.crcs) in
+  let offset = offset + Marshal.total_size str offset in
+  let flags = (Marshal.from_bytes str offset : flags) in
+  {
+    Cmi_format.cmi_name = name;
+    cmi_sign = sign;
+    cmi_crcs = crcs;
+    cmi_flags = flags;
+  }
+
+let read_cmi filename str =
+  let magic_len = String.length Config.cmi_magic_number in
+  let buffer = Bytes.sub str 0 magic_len in
+  (if buffer <> Bytes.of_string Config.cmi_magic_number then
+   let pre_len = String.length Config.cmi_magic_number - 3 in
+   if
+     Bytes.sub buffer 0 pre_len
+     = Bytes.of_string @@ String.sub Config.cmi_magic_number 0 pre_len
+   then
+     let msg =
+       if buffer < Bytes.of_string Config.cmi_magic_number then "an older"
+       else "a newer"
+     in
+     raise (Cmi_format.Error (Wrong_version_interface (filename, msg)))
+   else raise (Cmi_format.Error (Not_an_interface filename)));
+  input_cmi (Bytes.sub str magic_len (Bytes.length str - magic_len))
 
 let functions : (unit -> unit) list option ref = ref None
 
@@ -166,11 +179,23 @@ let init cmas cmis =
   try
     Clflags.no_check_prims := true;
     let cmi_files = List.map (fun cmi -> (Filename.basename cmi, cmi)) cmis in
-    Sys_js.mount ~path:"/dynamic/cmis" (load_resource cmi_files);
-    List.iter
-      (fun (path, _) -> Sys_js.register_lazy ("/dynamic/cmis/" ^ path))
-      cmi_files;
-    Topdirs.dir_directory "/dynamic/cmis";
+    let old_loader = !Persistent_env.Persistent_signature.load in
+    (Persistent_env.Persistent_signature.load :=
+       fun ~unit_name ->
+         let result =
+           Option.bind
+             (List.assoc_opt (String.lowercase_ascii unit_name) cmi_files)
+             sync_get
+         in
+         match result with
+         | Some x ->
+             Some
+               {
+                 Persistent_env.Persistent_signature.filename =
+                   Sys.executable_name;
+                 cmi = read_cmi unit_name (Bytes.of_string x);
+               }
+         | _ -> old_loader ~unit_name);
     Js_of_ocaml.Worker.import_scripts (List.map fst cmas);
     functions :=
       Some
@@ -188,10 +213,8 @@ let init cmas cmis =
 let setup () =
   let open Js_of_ocaml in
   try
-    Sys_js.set_channel_flusher stdout
-      (Buffer.add_string stdout_buff);
-    Sys_js.set_channel_flusher stderr
-      (Buffer.add_string stderr_buff);
+    Sys_js.set_channel_flusher stdout (Buffer.add_string stdout_buff);
+    Sys_js.set_channel_flusher stderr (Buffer.add_string stderr_buff);
     (match !functions with
     | Some l -> setup l ()
     | None -> failwith "Error: toplevel has not been initialised");

@@ -66,7 +66,6 @@ module Types : sig
     | Abstract : 'a abstract -> 'a typ
 
   and 'a def = { name : string; description : string list; ty : 'a typ }
-
   and boxed_def = BoxedDef : 'a def -> boxed_def
 
   and ('a, 's) field = {
@@ -80,7 +79,6 @@ module Types : sig
   }
 
   and 'a boxed_field = BoxedField : ('a, 's) field -> 's boxed_field
-
   and field_getter = { field_get : 'a. string -> 'a typ -> ('a, msg) result }
 
   and 'a structure = {
@@ -101,7 +99,6 @@ module Types : sig
   }
 
   and 'a boxed_tag = BoxedTag : ('a, 's) tag -> 's boxed_tag
-
   and tag_getter = { tget : 'a. 'a typ -> ('a, msg) result }
 
   and 'a variant = {
@@ -120,104 +117,62 @@ module Types : sig
   }
 
   val int : int def
-
   val int32 : int32 def
-
   val int64 : int64 def
-
   val bool : bool def
-
   val float : float def
-
   val string : string def
-
   val char : char def
-
   val unit : unit def
-
   val default_types : boxed_def list
 end
 
 (** {2 Basic constructors} *)
 
 val rpc_of_int64 : int64 -> t
-
 val rpc_of_int32 : int32 -> t
-
 val rpc_of_int : int -> t
-
 val rpc_of_bool : bool -> t
-
 val rpc_of_float : float -> t
-
 val rpc_of_string : string -> t
-
 val rpc_of_dateTime : string -> t
-
 val rpc_of_base64 : string -> t
-
 val rpc_of_t : t -> t
-
 val rpc_of_unit : unit -> t
-
 val rpc_of_char : char -> t
-
 val int64_of_rpc : t -> int64
-
 val int32_of_rpc : t -> int32
-
 val int_of_rpc : t -> int
-
 val bool_of_rpc : t -> bool
-
 val float_of_rpc : t -> float
-
 val string_of_rpc : t -> string
-
 val dateTime_of_rpc : t -> string
-
 val base64_of_rpc : t -> string
-
 val t_of_rpc : t -> t
-
 val char_of_rpc : t -> char
-
 val unit_of_rpc : t -> unit
 
 module ResultUnmarshallers : sig
   val int64_of_rpc : t -> (int64, msg) result
-
   val int32_of_rpc : t -> (int32, msg) result
-
   val int_of_rpc : t -> (int, msg) result
-
   val bool_of_rpc : t -> (bool, msg) result
-
   val float_of_rpc : t -> (float, msg) result
-
   val string_of_rpc : t -> (string, msg) result
-
   val dateTime_of_rpc : t -> (string, msg) result
-
   val base64_of_rpc : t -> (string, msg) result
-
   val t_of_rpc : t -> (t, msg) result
-
   val unit_of_rpc : t -> (unit, msg) result
-
   val char_of_rpc : t -> (char, msg) result
 end
 
 (** {2 Calls} *)
 
 type callback = string list -> t -> unit
-
 type call = { name : string; params : t list; is_notification : bool }
 
 val call : string -> t list -> call
-
 val notification : string -> t list -> call
-
 val string_of_call : call -> string
 
 (** {2 Responses} *)
@@ -225,15 +180,12 @@ val string_of_call : call -> string
 type response = { success : bool; contents : t; is_notification : bool }
 
 val string_of_response : response -> string
-
 val success : t -> response
-
 val failure : t -> response
 
 (** {2 Run-time errors} *)
 
 exception Runtime_error of string * t
-
 exception Runtime_exception of string * string
 
 val set_debug : bool -> unit

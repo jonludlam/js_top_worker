@@ -4,13 +4,9 @@ open Rpc.Types
 type err = [ `Msg of string ]
 
 let tailrec_map f l = List.rev_map f l |> List.rev
-
 let ( >>| ) x f = match x with Ok x -> Ok (f x) | Error y -> Error y
-
 let ( >>= ) x f = match x with Ok x -> f x | Error y -> Error y
-
 let return x = Ok x
-
 let ok x = Ok x
 
 let rec unmarshal : type a. a typ -> Rpc.t -> (a, err) result =

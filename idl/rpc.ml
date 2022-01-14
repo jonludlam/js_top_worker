@@ -16,9 +16,7 @@
  *)
 
 let debug = ref false
-
 let set_debug x = debug := x
-
 let get_debug () = !debug
 
 type msg = [ `Msg of string ]
@@ -74,7 +72,6 @@ module Types = struct
 
   (* A type definition has a name and description *)
   and 'a def = { name : string; description : string list; ty : 'a typ }
-
   and boxed_def = BoxedDef : 'a def -> boxed_def
 
   and ('a, 's) field = {
@@ -89,7 +86,6 @@ module Types = struct
   }
 
   and 'a boxed_field = BoxedField : ('a, 's) field -> 's boxed_field
-
   and field_getter = { field_get : 'a. string -> 'a typ -> ('a, msg) result }
 
   and 'a structure = {
@@ -109,7 +105,6 @@ module Types = struct
   }
 
   and 'a boxed_tag = BoxedTag : ('a, 's) tag -> 's boxed_tag
-
   and tag_getter = { tget : 'a. 'a typ -> ('a, msg) result }
 
   and 'a variant = {
@@ -148,7 +143,6 @@ module Types = struct
     { name = "string"; ty = Basic String; description = [ "String" ] }
 
   let char = { name = "char"; ty = Basic Char; description = [ "Char" ] }
-
   let unit = { name = "unit"; ty = Unit; description = [ "Unit" ] }
 
   let default_types =
@@ -165,7 +159,6 @@ module Types = struct
 end
 
 exception Runtime_error of string * t
-
 exception Runtime_exception of string * string
 
 let map_strings sep fn l = String.concat sep (List.map fn l)
@@ -187,25 +180,15 @@ let rec to_string t =
   | Null -> "N"
 
 let rpc_of_t x = x
-
 let rpc_of_int64 i = Int i
-
 let rpc_of_int32 i = Int (Int64.of_int32 i)
-
 let rpc_of_int i = Int (Int64.of_int i)
-
 let rpc_of_bool b = Bool b
-
 let rpc_of_float f = Float f
-
 let rpc_of_string s = String s
-
 let rpc_of_dateTime s = DateTime s
-
 let rpc_of_base64 s = Base64 s
-
 let rpc_of_unit () = Null
-
 let rpc_of_char x = Int (Int64.of_int (Char.code x))
 
 let int64_of_rpc = function
@@ -262,7 +245,6 @@ let lowerfn = function
 
 module ResultUnmarshallers = struct
   let error_msg m = Error (`Msg m)
-
   let ok x = Ok x
 
   let int64_of_rpc = function
@@ -339,11 +321,9 @@ let struct_extend rpc default_rpc =
   | _, _ -> rpc
 
 type callback = string list -> t -> unit
-
 type call = { name : string; params : t list; is_notification : bool }
 
 let call name params = { name; params; is_notification = false }
-
 let notification name params = { name; params; is_notification = true }
 
 let string_of_call call =
@@ -360,5 +340,4 @@ let string_of_response response =
 (* is_notification is to be set as true only if the call was a notification *)
 
 let success v = { success = true; contents = v; is_notification = false }
-
 let failure v = { success = false; contents = v; is_notification = false }
