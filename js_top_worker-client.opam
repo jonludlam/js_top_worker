@@ -19,6 +19,3 @@ synopsis: "JS Toplevel worker client"
 description: """
 An OCaml toplevel designed to run as a web worker
 """
-pin-depends: [
-  ["js_of_ocaml.3.11.0" "git+https://github.com/jonludlam/js_of_ocaml#lazy_files"]
-]
