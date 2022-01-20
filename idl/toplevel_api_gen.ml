@@ -251,7 +251,7 @@ type completion_result =
   {
   n: int
     [@ocaml.doc
-      " The position in the input string from where the completions may be\n            inserted "];
+      " The position in the input string from where the completions may be\n          inserted "];
   completions: string list [@ocaml.doc " The list of possible completions "]}
 [@@deriving rpcty][@@ocaml.doc " The result returned by a 'complete' call. "]
 include
@@ -317,37 +317,128 @@ include
     and _ = typ_of_completion_result
     and _ = completion_result
   end[@@ocaml.doc "@inline"][@@merlin.hide ]
-type string_list = string list[@@deriving rpcty][@@ocaml.doc
-                                                  " Used by setup "]
+type cma =
+  {
+  url: string [@ocaml.doc " URL where the cma is available "];
+  fn: string [@ocaml.doc " Name of the 'wrapping' function "]}[@@deriving
+                                                                rpcty]
 include
   struct
-    let _ = fun (_ : string_list) -> ()
-    let rec typ_of_string_list =
-      Rpc.Types.List (let open Rpc.Types in Basic String)
-    and string_list =
+    let _ = fun (_ : cma) -> ()
+    let rec (cma_url : (_, cma) Rpc.Types.field) =
       {
-        Rpc.Types.name = "string_list";
-        Rpc.Types.description = ["Used by setup"];
-        Rpc.Types.ty = typ_of_string_list
+        Rpc.Types.fname = "url";
+        Rpc.Types.field = (let open Rpc.Types in Basic String);
+        Rpc.Types.fdefault = None;
+        Rpc.Types.fdescription = ["URL where the cma is available"];
+        Rpc.Types.fversion = None;
+        Rpc.Types.fget = (fun _r -> _r.url);
+        Rpc.Types.fset = (fun v -> fun _s -> { _s with url = v })
       }
-    let _ = typ_of_string_list
-    and _ = string_list
+    and (cma_fn : (_, cma) Rpc.Types.field) =
+      {
+        Rpc.Types.fname = "fn";
+        Rpc.Types.field = (let open Rpc.Types in Basic String);
+        Rpc.Types.fdefault = None;
+        Rpc.Types.fdescription = ["Name of the 'wrapping' function"];
+        Rpc.Types.fversion = None;
+        Rpc.Types.fget = (fun _r -> _r.fn);
+        Rpc.Types.fset = (fun v -> fun _s -> { _s with fn = v })
+      }
+    and typ_of_cma =
+      Rpc.Types.Struct
+        ({
+           Rpc.Types.fields =
+             [Rpc.Types.BoxedField cma_url; Rpc.Types.BoxedField cma_fn];
+           Rpc.Types.sname = "cma";
+           Rpc.Types.version = None;
+           Rpc.Types.constructor =
+             (fun getter ->
+                let open Rresult.R in
+                  (getter.Rpc.Types.field_get "fn"
+                     (let open Rpc.Types in Basic String))
+                    >>=
+                    (fun cma_fn ->
+                       (getter.Rpc.Types.field_get "url"
+                          (let open Rpc.Types in Basic String))
+                         >>=
+                         (fun cma_url ->
+                            return { url = cma_url; fn = cma_fn })))
+         } : cma Rpc.Types.structure)
+    and cma =
+      {
+        Rpc.Types.name = "cma";
+        Rpc.Types.description = [];
+        Rpc.Types.ty = typ_of_cma
+      }
+    let _ = cma_url
+    and _ = cma_fn
+    and _ = typ_of_cma
+    and _ = cma
   end[@@ocaml.doc "@inline"][@@merlin.hide ]
-type string_string_list = (string * string) list[@@deriving rpcty][@@ocaml.doc
-                                                                    " Used by setup "]
+type init_libs = {
+  cmi_urls: string list ;
+  cmas: cma list }[@@deriving rpcty]
 include
   struct
-    let _ = fun (_ : string_string_list) -> ()
-    let rec typ_of_string_string_list =
-      Rpc.Types.Dict (Rpc.Types.String, (let open Rpc.Types in Basic String))
-    and string_string_list =
+    let _ = fun (_ : init_libs) -> ()
+    let rec (init_libs_cmi_urls : (_, init_libs) Rpc.Types.field) =
       {
-        Rpc.Types.name = "string_string_list";
-        Rpc.Types.description = ["Used by setup"];
-        Rpc.Types.ty = typ_of_string_string_list
+        Rpc.Types.fname = "cmi_urls";
+        Rpc.Types.field =
+          (Rpc.Types.List (let open Rpc.Types in Basic String));
+        Rpc.Types.fdefault = None;
+        Rpc.Types.fdescription = [];
+        Rpc.Types.fversion = None;
+        Rpc.Types.fget = (fun _r -> _r.cmi_urls);
+        Rpc.Types.fset = (fun v -> fun _s -> { _s with cmi_urls = v })
       }
-    let _ = typ_of_string_string_list
-    and _ = string_string_list
+    and (init_libs_cmas : (_, init_libs) Rpc.Types.field) =
+      {
+        Rpc.Types.fname = "cmas";
+        Rpc.Types.field = (Rpc.Types.List typ_of_cma);
+        Rpc.Types.fdefault = None;
+        Rpc.Types.fdescription = [];
+        Rpc.Types.fversion = None;
+        Rpc.Types.fget = (fun _r -> _r.cmas);
+        Rpc.Types.fset = (fun v -> fun _s -> { _s with cmas = v })
+      }
+    and typ_of_init_libs =
+      Rpc.Types.Struct
+        ({
+           Rpc.Types.fields =
+             [Rpc.Types.BoxedField init_libs_cmi_urls;
+             Rpc.Types.BoxedField init_libs_cmas];
+           Rpc.Types.sname = "init_libs";
+           Rpc.Types.version = None;
+           Rpc.Types.constructor =
+             (fun getter ->
+                let open Rresult.R in
+                  (getter.Rpc.Types.field_get "cmas"
+                     (Rpc.Types.List typ_of_cma))
+                    >>=
+                    (fun init_libs_cmas ->
+                       (getter.Rpc.Types.field_get "cmi_urls"
+                          (Rpc.Types.List
+                             (let open Rpc.Types in Basic String)))
+                         >>=
+                         (fun init_libs_cmi_urls ->
+                            return
+                              {
+                                cmi_urls = init_libs_cmi_urls;
+                                cmas = init_libs_cmas
+                              })))
+         } : init_libs Rpc.Types.structure)
+    and init_libs =
+      {
+        Rpc.Types.name = "init_libs";
+        Rpc.Types.description = [];
+        Rpc.Types.ty = typ_of_init_libs
+      }
+    let _ = init_libs_cmi_urls
+    and _ = init_libs_cmas
+    and _ = typ_of_init_libs
+    and _ = init_libs
   end[@@ocaml.doc "@inline"][@@merlin.hide ]
 type err =
   | InternalError of string [@@ocaml.doc
@@ -422,21 +513,15 @@ module Make(R:RPC) =
     let phrase_p = Param.mk Types.string
     let exec_result_p = Param.mk exec_result
     let completion_p = Param.mk completion_result
-    let cmas =
-      Param.mk ~name:"cmas"
-        ~description:["A list of pairs. The first element of the pair is a urls to a";
-                     "cma file pre-compiled to javascript. The second item is the";
-                     "name of the function to be invoked to load the cma file";
-                     "(ie, the cma was compiled with --wrap-func).";
-                     "These will be loaded synchronously during the init call."]
-        string_string_list
-    let cmis =
-      Param.mk ~name:"cmis"
-        ~description:["A list of urls of cmi files. These files will be loaded on demand";
-                     "during evaluation of toplevel phrases."] string_list
+    let init_libs =
+      Param.mk ~name:"init_libs"
+        ~description:["Libraries to load during the initialisation of the toplevel. ";
+                     "If the stdlib cmis have not been compiled into the worker this ";
+                     "MUST include the urls from which they may be fetched"]
+        init_libs
     let init =
       declare "init" ["Initialise the toplevel."]
-        (cmas @-> (cmis @-> (returning unit_p err)))
+        (init_libs @-> (returning unit_p err))
     let setup =
       declare "setup"
         ["Start the toplevel. Return value is the initial blurb ";

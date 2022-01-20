@@ -1,0 +1,26 @@
+(executable
+ (name example)
+ (preprocess
+  (pps js_of_ocaml-ppx))
+ (modes js)
+ (modules example)
+ (libraries js_top_worker_client lwt js_of_ocaml))
+
+(executable
+ (name worker)
+ (modes byte)
+ (modules worker)
+ (libraries js_top_worker))
+
+(rule
+ (targets worker.js)
+ (action
+  (run
+   %{bin:js_of_ocaml}
+   --toplevel
+   --pretty
+   +toplevel.js
+   +dynlink.js
+   %{dep:worker.bc}
+   -o
+   %{targets})))

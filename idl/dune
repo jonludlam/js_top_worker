@@ -7,7 +7,7 @@
 (library
  (name js_top_worker_client)
  (public_name js_top_worker-client)
- (modules worker_rpc)
+ (modules js_top_worker_client)
  (libraries js_top_worker_rpc lwt brr))
 
 (library

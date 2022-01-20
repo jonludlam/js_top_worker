@@ -20,17 +20,19 @@ type exec_result = {
 type completion_result = {
   n : int;
       (** The position in the input string from where the completions may be
-            inserted *)
+          inserted *)
   completions : string list;  (** The list of possible completions *)
 }
 [@@deriving rpcty]
 (** The result returned by a 'complete' call. *)
 
-type string_list = string list [@@deriving rpcty]
-(** Used by setup *)
+type cma = {
+  url : string;  (** URL where the cma is available *)
+  fn : string;  (** Name of the 'wrapping' function *)
+}
+[@@deriving rpcty]
 
-type string_string_list = (string * string) list [@@deriving rpcty]
-(** Used by setup *)
+type init_libs = { cmi_urls : string list; cmas : cma list } [@@deriving rpcty]
 
 (** For now we are only using a simple error type *)
 type err = InternalError of string [@@deriving rpcty]
@@ -63,31 +65,20 @@ module Make (R : RPC) = struct
   let exec_result_p = Param.mk exec_result
   let completion_p = Param.mk completion_result
 
-  let cmas =
-    Param.mk ~name:"cmas"
+  let init_libs =
+    Param.mk ~name:"init_libs"
       ~description:
         [
-          "A list of pairs. The first element of the pair is a urls to a";
-          "cma file pre-compiled to javascript. The second item is the";
-          "name of the function to be invoked to load the cma file";
-          "(ie, the cma was compiled with --wrap-func).";
-          "These will be loaded synchronously during the init call.";
+          "Libraries to load during the initialisation of the toplevel. ";
+          "If the stdlib cmis have not been compiled into the worker this ";
+          "MUST include the urls from which they may be fetched";
         ]
-      string_string_list
-
-  let cmis =
-    Param.mk ~name:"cmis"
-      ~description:
-        [
-          "A list of urls of cmi files. These files will be loaded on demand";
-          "during evaluation of toplevel phrases.";
-        ]
-      string_list
+      init_libs
 
   let init =
     declare "init"
       [ "Initialise the toplevel." ]
-      (cmas @-> cmis @-> returning unit_p err)
+      (init_libs @-> returning unit_p err)
 
   let setup =
     declare "setup"

@@ -1,7 +1,10 @@
 open Js_of_ocaml_toplevel
 open Js_top_worker_rpc
 
-let log fmt = Format.kasprintf (fun s -> Js_of_ocaml.(Firebug.console##log (Js.string s))) fmt
+let log fmt =
+  Format.kasprintf
+    (fun s -> Js_of_ocaml.(Firebug.console##log (Js.string s)))
+    fmt
 
 (* OCamlorg toplevel in a web worker
 
@@ -176,11 +179,15 @@ let read_cmi filename str =
 
 let functions : (unit -> unit) list option ref = ref None
 
-let init cmas cmis =
+let init (init_libs : Toplevel_api_gen.init_libs) =
   let open Js_of_ocaml in
   try
     Clflags.no_check_prims := true;
-    let cmi_files = List.map (fun cmi -> (Filename.basename cmi |> Filename.chop_extension, cmi)) cmis in
+    let cmi_files =
+      List.map
+        (fun cmi -> (Filename.basename cmi |> Filename.chop_extension, cmi))
+        init_libs.cmi_urls
+    in
     let old_loader = !Persistent_env.Persistent_signature.load in
     (Persistent_env.Persistent_signature.load :=
        fun ~unit_name ->
@@ -198,7 +205,8 @@ let init cmas cmis =
                  cmi = read_cmi unit_name (Bytes.of_string x);
                }
          | _ -> old_loader ~unit_name);
-    Js_of_ocaml.Worker.import_scripts (List.map fst cmas);
+    Js_of_ocaml.Worker.import_scripts
+      (List.map (fun cma -> cma.Toplevel_api_gen.url) init_libs.cmas);
     functions :=
       Some
         (List.map
@@ -207,7 +215,7 @@ let init cmas cmis =
              let func = Js.Unsafe.js_expr func_name in
              fun () ->
                Js.Unsafe.fun_call func [| Js.Unsafe.inject Dom_html.window |])
-           (List.map snd cmas));
+           (List.map (fun cma -> cma.Toplevel_api_gen.fn) init_libs.cmas));
     IdlM.ErrM.return ()
   with e ->
     IdlM.ErrM.return_err (Toplevel_api_gen.InternalError (Printexc.to_string e))

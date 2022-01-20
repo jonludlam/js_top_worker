@@ -16,6 +16,8 @@ type context = {
   waiting : ((Rpc.response, exn) Result.t Lwt_mvar.t * int) Queue.t;
 }
 
+type rpc = Rpc.call -> Rpc.response Lwt.t
+
 exception Timeout
 
 let demux context msg =
@@ -27,13 +29,6 @@ let demux context msg =
           let msg : string = Message.Ev.data (Brr.Ev.as_type msg) in
           Lwt_mvar.put mv (Ok (Marshal.from_string msg 0)))
 
-let start worker timeout timeout_fn =
-  let context = { worker; timeout; timeout_fn; waiting = Queue.create () } in
-  let () =
-    Brr.Ev.listen Message.Ev.message (demux context) (Worker.as_target worker)
-  in
-  context
-
 let rpc : context -> Rpc.call -> Rpc.response Lwt.t =
  fun context call ->
   let open Lwt in
@@ -42,6 +37,7 @@ let rpc : context -> Rpc.call -> Rpc.response Lwt.t =
   let outstanding_execution =
     Brr.G.set_timeout ~ms:context.timeout (fun () ->
         Lwt.async (fun () -> Lwt_mvar.put mv (Error Timeout));
+        Worker.terminate context.worker;
         context.timeout_fn ())
   in
   Queue.push (mv, outstanding_execution) context.waiting;
@@ -52,3 +48,41 @@ let rpc : context -> Rpc.call -> Rpc.response Lwt.t =
       let response = jv in
       Lwt.return response
   | Error exn -> Lwt.fail exn
+
+let start url timeout timeout_fn : rpc =
+  let worker = Worker.create (Jstr.v url) in
+  let context = { worker; timeout; timeout_fn; waiting = Queue.create () } in
+  let () =
+    Brr.Ev.listen Message.Ev.message (demux context) (Worker.as_target worker)
+  in
+  rpc context
+
+module Rpc_lwt = Idl.Make (Lwt)
+module Wraw = Toplevel_api_gen.Make (Rpc_lwt.GenClient ())
+
+module W : sig
+  val init :
+    rpc ->
+    Toplevel_api_gen.init_libs ->
+    (unit, Toplevel_api_gen.err) result Lwt.t
+
+  val setup :
+    rpc ->
+    unit ->
+    (Toplevel_api_gen.exec_result, Toplevel_api_gen.err) result Lwt.t
+
+  val exec :
+    rpc ->
+    string ->
+    (Toplevel_api_gen.exec_result, Toplevel_api_gen.err) result Lwt.t
+
+  val complete :
+    rpc ->
+    string ->
+    (Toplevel_api_gen.completion_result, Toplevel_api_gen.err) result Lwt.t
+end = struct
+  let init rpc a = Wraw.init rpc a |> Rpc_lwt.T.get
+  let setup rpc a = Wraw.setup rpc a |> Rpc_lwt.T.get
+  let exec rpc a = Wraw.exec rpc a |> Rpc_lwt.T.get
+  let complete rpc a = Wraw.complete rpc a |> Rpc_lwt.T.get
+end
