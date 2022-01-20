@@ -1,6 +1,8 @@
 open Js_of_ocaml_toplevel
 open Js_top_worker_rpc
 
+let log fmt = Format.kasprintf (fun s -> Js_of_ocaml.(Firebug.console##log (Js.string s))) fmt
+
 (* OCamlorg toplevel in a web worker
 
    This communicates with the toplevel code via the API defined in
@@ -178,13 +180,13 @@ let init cmas cmis =
   let open Js_of_ocaml in
   try
     Clflags.no_check_prims := true;
-    let cmi_files = List.map (fun cmi -> (Filename.basename cmi, cmi)) cmis in
+    let cmi_files = List.map (fun cmi -> (Filename.basename cmi |> Filename.chop_extension, cmi)) cmis in
     let old_loader = !Persistent_env.Persistent_signature.load in
     (Persistent_env.Persistent_signature.load :=
        fun ~unit_name ->
          let result =
            Option.bind
-             (List.assoc_opt (String.lowercase_ascii unit_name) cmi_files)
+             (List.assoc_opt (String.uncapitalize_ascii unit_name) cmi_files)
              sync_get
          in
          match result with
