@@ -77,7 +77,7 @@ module Make (R : RPC) = struct
 
   let init =
     declare "init"
-      [ "Initialise the toplevel." ]
+      [ "Initialise the toplevel. This must be called before any other API." ]
       (init_libs @-> returning unit_p err)
 
   let setup =

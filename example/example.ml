@@ -17,21 +17,11 @@ let log_output (o : Toplevel_api_gen.exec_result) =
   Option.iter (fun s -> log ("sharp_ppf: " ^ s)) o.sharp_ppf;
   Option.iter (fun s -> log ("caml_ppf: " ^ s)) o.caml_ppf
 
-let start rpc =
-  let ( let* ) = Lwt_result.bind in
-  let* o = W.setup rpc () in
-  log_output o;
-  Lwt.return (Ok o)
-
-let exec rpc txt =
-  let ( let* ) = Lwt_result.bind in
-  let* o = W.exec rpc txt in
-  log_output o;
-  Lwt.return (Ok o)
-
 let _ =
   let ( let* ) = Lwt_result.bind in
   let* rpc = initialise "worker.js" (fun _ -> log "Timeout") in
-  let* _ = start rpc in
-  let* _ = exec rpc "2*2;;" in
+  let* o = W.setup rpc () in
+  log_output o;
+  let* o = W.exec rpc "2*2;;" in
+  log_output o;
   Lwt.return (Ok ())
