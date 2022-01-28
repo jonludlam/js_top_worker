@@ -10,6 +10,7 @@ depends: [
   "astring"
   "brr"
   "js_top_worker"
+  "lwt"
 ]
 build : [
   ["dune" "subst"] {pinned}
