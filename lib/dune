@@ -1,4 +1,12 @@
 ; Worker library
+(rule
+ (targets worker.ml)
+ (deps
+  (:x worker.cppo.ml))
+ (action
+  (chdir
+   %{workspace_root}
+   (run %{bin:cppo} -V OCAML:%{ocaml_version} %{x} -o %{targets}))))
 
 (library
  (public_name js_top_worker)

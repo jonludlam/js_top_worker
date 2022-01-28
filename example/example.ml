@@ -15,7 +15,13 @@ let log_output (o : Toplevel_api_gen.exec_result) =
   Option.iter (fun s -> log ("stdout: " ^ s)) o.stdout;
   Option.iter (fun s -> log ("stderr: " ^ s)) o.stderr;
   Option.iter (fun s -> log ("sharp_ppf: " ^ s)) o.sharp_ppf;
-  Option.iter (fun s -> log ("caml_ppf: " ^ s)) o.caml_ppf
+  Option.iter (fun s -> log ("caml_ppf: " ^ s)) o.caml_ppf;
+  let strloc (line,col) =
+    "(" ^ string_of_int line ^ "," ^ string_of_int col ^ ")"
+  in
+  Option.iter (fun h ->
+    let open Toplevel_api_gen in
+    log ("highlight " ^ strloc (h.line1, h.col1) ^ " to " ^ strloc (h.line2, h.col2))) o.highlight
 
 let _ =
   let ( let* ) = Lwt_result.bind in

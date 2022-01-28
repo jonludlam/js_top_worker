@@ -441,9 +441,7 @@ include
     and _ = init_libs
   end[@@ocaml.doc "@inline"][@@merlin.hide ]
 type err =
-  | InternalError of string [@@ocaml.doc
-                              " For now we are only using a simple error type "]
-[@@deriving rpcty]
+  | InternalError of string [@@deriving rpcty]
 include
   struct
     let _ = fun (_ : err) -> ()
@@ -481,8 +479,7 @@ include
     and err =
       {
         Rpc.Types.name = "err";
-        Rpc.Types.description =
-          ["For now we are only using a simple error type"];
+        Rpc.Types.description = [];
         Rpc.Types.ty = typ_of_err
       }
     let _ = typ_of_err
@@ -511,6 +508,7 @@ module Make(R:RPC) =
     let implementation = implement description
     let unit_p = Param.mk Types.unit
     let phrase_p = Param.mk Types.string
+    let typecheck_result_p = Param.mk exec_result
     let exec_result_p = Param.mk exec_result
     let completion_p = Param.mk completion_result
     let init_libs =
@@ -520,7 +518,8 @@ module Make(R:RPC) =
                      "MUST include the urls from which they may be fetched"]
         init_libs
     let init =
-      declare "init" ["Initialise the toplevel."]
+      declare "init"
+        ["Initialise the toplevel. This must be called before any other API."]
         (init_libs @-> (returning unit_p err))
     let setup =
       declare "setup"
@@ -528,6 +527,10 @@ module Make(R:RPC) =
         "printed when starting a toplevel. Note that the toplevel";
         "must be initialised first."]
         (unit_p @-> (returning exec_result_p err))
+    let typecheck =
+      declare "typecheck"
+        ["Typecheck a phrase without actually executing it."]
+        (phrase_p @-> (returning typecheck_result_p err))
     let exec =
       declare "exec"
         ["Execute a phrase using the toplevel. The toplevel must have been";

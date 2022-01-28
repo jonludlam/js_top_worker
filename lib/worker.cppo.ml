@@ -1,6 +1,8 @@
 open Js_of_ocaml_toplevel
 open Js_top_worker_rpc
 
+let optbind : 'a option -> ('a -> 'b option) -> 'b option = fun x fn -> match x with | None -> None | Some a -> fn a 
+
 let log fmt =
   Format.kasprintf
     (fun s -> Js_of_ocaml.(Firebug.console##log (Js.string s)))
@@ -141,7 +143,8 @@ let sync_get url =
 
 type signature = Types.signature_item list
 type flags = Cmi_format.pers_flags list
-type header = Misc.modname * signature
+type header = string * signature
+type crcs = (string * Digest.t option) list 
 
 (** The following two functions are taken from cmi_format.ml in
     the compiler, but changed to work on bytes rather than input
@@ -150,7 +153,7 @@ let input_cmi str =
   let offset = 0 in
   let (name, sign) = (Marshal.from_bytes str offset : header) in
   let offset = offset + Marshal.total_size str offset in
-  let crcs = (Marshal.from_bytes str offset : Misc.crcs) in
+  let crcs = (Marshal.from_bytes str offset : crcs) in
   let offset = offset + Marshal.total_size str offset in
   let flags = (Marshal.from_bytes str offset : flags) in
   {
@@ -188,19 +191,24 @@ let init (init_libs : Toplevel_api_gen.init_libs) =
         (fun cmi -> (Filename.basename cmi |> Filename.chop_extension, cmi))
         init_libs.cmi_urls
     in
-    let old_loader = !Persistent_env.Persistent_signature.load in
-    (Persistent_env.Persistent_signature.load :=
+#if OCAML_VERSION < (4,9,0)
+    let open Env.Persistent_signature in
+#else
+    let open Persistent_env.Persistent_signature in
+#endif
+    let old_loader = !load in
+    (load :=
        fun ~unit_name ->
          let result =
-           Option.bind
-             (List.assoc_opt (String.uncapitalize_ascii unit_name) cmi_files)
+            optbind
+             (try Some (List.assoc (String.uncapitalize_ascii unit_name) cmi_files) with _ -> None)
              sync_get
          in
          match result with
          | Some x ->
              Some
                {
-                 Persistent_env.Persistent_signature.filename =
+                 filename =
                    Sys.executable_name;
                  cmi = read_cmi unit_name (Bytes.of_string x);
                }
@@ -264,6 +272,101 @@ let server process e =
       Js_of_ocaml.Worker.post_message (Marshal.to_string response []));
   ()
 
+  let loc = function
+  | Syntaxerr.Error x ->
+    Some (Syntaxerr.location_of_error x)
+  | Lexer.Error (_, loc)
+  | Typecore.Error (loc, _, _)
+  | Typetexp.Error (loc, _, _)
+  | Typeclass.Error (loc, _, _)
+  | Typemod.Error (loc, _, _)
+  | Typedecl.Error (loc, _)
+  | Translcore.Error (loc, _)
+  | Translclass.Error (loc, _)
+  | Translmod.Error (loc, _) ->
+    Some loc
+  | _ ->
+    None
+
+let refill_lexbuf s p ppf buffer len =
+  if !p = String.length s then
+    0
+  else
+    let len', nl =
+      try String.index_from s !p '\n' - !p + 1, false with
+      | _ ->
+        String.length s - !p, true
+    in
+    let len'' = min len len' in
+    String.blit s !p buffer 0 len'';
+    (match ppf with
+    | Some ppf ->
+      Format.fprintf ppf "%s" (Bytes.sub_string buffer 0 len'');
+      if nl then Format.pp_print_newline ppf ();
+      Format.pp_print_flush ppf ()
+    | None ->
+      ());
+    p := !p + len'';
+    len''
+
+let typecheck_phrase =
+  let res_buff = Buffer.create 100 in
+  let pp_result = Format.formatter_of_buffer res_buff in
+  let highlighted = ref None in
+  let highlight_location loc =
+    let _file1, line1, col1 = Location.get_pos_info loc.Location.loc_start in
+    let _file2, line2, col2 = Location.get_pos_info loc.Location.loc_end in
+    highlighted := Some Toplevel_api_gen.{ line1; col1; line2; col2 }
+  in
+  fun phr ->
+    Buffer.clear res_buff;
+    Buffer.clear stderr_buff;
+    Buffer.clear stdout_buff;
+    try
+      let lb = Lexing.from_function (refill_lexbuf phr (ref 0) None) in
+      let phr = !Toploop.parse_toplevel_phrase lb in
+      let phr = Toploop.preprocess_phrase pp_result phr in
+      match phr with
+      | Parsetree.Ptop_def sstr ->
+        let oldenv = !Toploop.toplevel_env in
+        Typecore.reset_delayed_checks ();
+#if OCAML_VERSION >= (4,9,0)
+        let str, sg, sn, newenv = Typemod.type_toplevel_phrase oldenv sstr in
+        let sg' = Typemod.Signature_names.simplify newenv sn sg in
+        ignore (Includemod.signatures ~mark:Mark_positive oldenv sg sg');
+#else
+        let str, sg, newenv = Typemod.type_toplevel_phrase oldenv sstr in
+        let sg' = Typemod.simplify_signature sg in
+        ignore (Includemod.signatures oldenv sg sg');
+#endif
+        Typecore.force_delayed_checks ();
+        Printtyped.implementation pp_result str;
+        Format.pp_print_flush pp_result ();
+        Warnings.check_fatal ();
+        flush_all ();
+        IdlM.ErrM.return
+          Toplevel_api_gen.
+            { stdout = buff_opt stdout_buff
+            ; stderr = buff_opt stderr_buff
+            ; sharp_ppf = None
+            ; caml_ppf = buff_opt res_buff
+            ; highlight = !highlighted
+            }
+      | _ ->
+        failwith "Typechecking"
+    with
+    | x ->
+      (match loc x with None -> () | Some loc -> highlight_location loc);
+      Errors.report_error Format.err_formatter x;
+      IdlM.ErrM.return
+        Toplevel_api_gen.
+          { stdout = buff_opt stdout_buff
+          ; stderr = buff_opt stderr_buff
+          ; sharp_ppf = None
+          ; caml_ppf = buff_opt res_buff
+          ; highlight = !highlighted
+          }
+
 let run () =
   (* Here we bind the server stub functions to the implementations *)
   let open Js_of_ocaml in
@@ -274,6 +377,7 @@ let run () =
     Server.exec execute;
     Server.setup setup;
     Server.init init;
+    Server.typecheck typecheck_phrase;
     let rpc_fn = IdlM.server Server.implementation in
     Js_of_ocaml.Worker.set_onmessage (server rpc_fn);
     Firebug.console##log (Js.string "All finished")
