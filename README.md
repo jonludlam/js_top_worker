@@ -1,4 +1,4 @@
-An OCaml toplevel designed to run in a web worker
+# An OCaml toplevel designed to run in a web worker
 
 To run the example, the worker needs to be served by an http server rather
 than loaded from the filesystem. Therefore the example may be run in the
