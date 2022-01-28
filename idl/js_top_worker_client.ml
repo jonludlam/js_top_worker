@@ -76,6 +76,11 @@ module W : sig
     unit ->
     (Toplevel_api_gen.exec_result, Toplevel_api_gen.err) result Lwt.t
 
+  val typecheck :
+    rpc ->
+    string ->
+    (Toplevel_api_gen.exec_result, Toplevel_api_gen.err) result Lwt.t
+
   val exec :
     rpc ->
     string ->
@@ -93,6 +98,7 @@ end = struct
 
   let init rpc a = Wraw.init rpc a |> Rpc_lwt.T.get
   let setup rpc a = Wraw.setup rpc a |> Rpc_lwt.T.get
+  let typecheck rpc a = Wraw.typecheck rpc a |> Rpc_lwt.T.get
   let exec rpc a = Wraw.exec rpc a |> Rpc_lwt.T.get
   let complete rpc a = Wraw.complete rpc a |> Rpc_lwt.T.get
 end

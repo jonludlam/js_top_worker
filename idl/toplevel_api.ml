@@ -33,7 +33,6 @@ type cma = {
 [@@deriving rpcty]
 
 type init_libs = { cmi_urls : string list; cmas : cma list } [@@deriving rpcty]
-
 type err = InternalError of string [@@deriving rpcty]
 
 module E = Idl.Error.Make (struct
@@ -90,8 +89,7 @@ module Make (R : RPC) = struct
       (unit_p @-> returning exec_result_p err)
 
   let typecheck =
-    declare
-      "typecheck"
+    declare "typecheck"
       [ "Typecheck a phrase without actually executing it." ]
       (phrase_p @-> returning typecheck_result_p err)
 
