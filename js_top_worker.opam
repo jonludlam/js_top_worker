@@ -9,6 +9,8 @@ depends: [
   "rresult"
   "astring"
   "js_of_ocaml-toplevel"
+  "js_of_ocaml-compiler"
+  "js_of_ocaml-ppx"
 ]
 build : [
   ["dune" "subst"] {pinned}
