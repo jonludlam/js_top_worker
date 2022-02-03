@@ -6,20 +6,15 @@ license: "ISC"
 homepage: "https://github.com/jonludlam/js_top_worker"
 bug-reports: "https://github.com/jonludlam/js_top_worker/issues"
 depends: [
-  "ocaml"
+  "ocaml" {>= "4.04"}
   "dune" {>= "2.9.1"}
-  "js_of_ocaml" {>= "3.11.0"}
   "rresult"
-  "astring"
-  "brr"
-  "js_top_worker"
-  "lwt"
 ]
 build : [
   ["dune" "subst"] {pinned}
   ["dune" "build" "-p" name "-j" jobs]
 ]
-synopsis: "JS Toplevel worker client"
+synopsis: "JS Toplevel worker - RPC functions"
 description: """
 An OCaml toplevel designed to run as a web worker
 """

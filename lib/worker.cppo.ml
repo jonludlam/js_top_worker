@@ -330,8 +330,12 @@ let typecheck_phrase =
       | Parsetree.Ptop_def sstr ->
         let oldenv = !Toploop.toplevel_env in
         Typecore.reset_delayed_checks ();
-#if OCAML_VERSION >= (4,9,0)
+#if OCAML_VERSION >= (4,8,0) && OCAML_VERSION < (4,14,0)
         let str, sg, sn, newenv = Typemod.type_toplevel_phrase oldenv sstr in
+        let sg' = Typemod.Signature_names.simplify newenv sn sg in
+        ignore (Includemod.signatures ~mark:Mark_positive oldenv sg sg');
+#elif OCAML_VERSION >= (4,14,0)
+        let str, sg, sn, _, newenv = Typemod.type_toplevel_phrase oldenv sstr in
         let sg' = Typemod.Signature_names.simplify newenv sn sg in
         ignore (Includemod.signatures ~mark:Mark_positive oldenv sg sg');
 #else
