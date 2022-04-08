@@ -12,7 +12,8 @@ depends: [
   "rresult"
   "astring"
   "brr"
-  "js_top_worker"
+  "js_top_worker" {= version}
+  "js_top_worker-rpc" {= version}
   "lwt"
 ]
 build : [
