@@ -2,8 +2,21 @@
 open Js_of_ocaml
 open Js_top_worker_rpc
 module W = Js_top_worker_client.W
+open Brr
 
 let log s = Firebug.console##log (Js.string s)
+
+let insert_img mime data =
+  El.append_children (Document.body G.document)
+    El.
+      [
+        img
+          ~at:
+            [
+              At.v (Jstr.v "src") (Jstr.v ("data:" ^ mime ^ ";base64," ^ data));
+            ]
+          ();
+      ]
 
 let initialise s callback =
   let ( let* ) = Lwt_result.bind in
@@ -16,6 +29,9 @@ let log_output (o : Toplevel_api_gen.exec_result) =
   Option.iter (fun s -> log ("stderr: " ^ s)) o.stderr;
   Option.iter (fun s -> log ("sharp_ppf: " ^ s)) o.sharp_ppf;
   Option.iter (fun s -> log ("caml_ppf: " ^ s)) o.caml_ppf;
+  List.iter
+    (fun m -> insert_img m.Mime_printer.mime_type m.Mime_printer.data)
+    o.mime_results;
   let strloc (line, col) =
     "(" ^ string_of_int line ^ "," ^ string_of_int col ^ ")"
   in
@@ -35,5 +51,11 @@ let _ =
   let* o = W.setup rpc () in
   log_output o;
   let* o = W.exec rpc "2*2;;" in
+  log_output o;
+  let* o =
+    W.exec rpc
+      "Mime_printer.push ~encoding:Mime_printer.Base64 \"image/png\" \
+       \"iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg==\";;"
+  in
   log_output o;
   Lwt.return (Ok ())

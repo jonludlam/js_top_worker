@@ -123,6 +123,7 @@ let execute =
           sharp_ppf = buff_opt code_buff;
           caml_ppf = buff_opt res_buff;
           highlight = !highlighted;
+          mime_results = Mime_printer.get ();
         }
 
 let sync_get url =
@@ -245,6 +246,7 @@ let setup () =
           sharp_ppf = None;
           caml_ppf = None;
           highlight = None;
+          mime_results = [];
         }
   with e ->
     IdlM.ErrM.return_err (Toplevel_api_gen.InternalError (Printexc.to_string e))
@@ -355,6 +357,7 @@ let typecheck_phrase =
             ; sharp_ppf = None
             ; caml_ppf = buff_opt res_buff
             ; highlight = !highlighted
+            ; mime_results = []
             }
       | _ ->
         failwith "Typechecking"
@@ -369,6 +372,7 @@ let typecheck_phrase =
           ; sharp_ppf = None
           ; caml_ppf = buff_opt res_buff
           ; highlight = !highlighted
+          ; mime_results = []
           }
 
 let run () =

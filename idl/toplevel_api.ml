@@ -7,12 +7,22 @@ type highlight = { line1 : int; line2 : int; col1 : int; col2 : int }
 [@@deriving rpcty]
 (** An area to be highlighted *)
 
+type encoding = Mime_printer.encoding = Noencoding | Base64 [@@deriving rpcty]
+
+type mime_result = Mime_printer.t = {
+  mime_type : string;
+  encoding : encoding;
+  data : string;
+}
+[@@deriving rpcty]
+
 type exec_result = {
   stdout : string option;
   stderr : string option;
   sharp_ppf : string option;
   caml_ppf : string option;
   highlight : highlight option;
+  mime_results : mime_result list;
 }
 [@@deriving rpcty]
 (** Represents the result of executing a toplevel phrase *)

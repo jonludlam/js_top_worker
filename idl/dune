@@ -2,7 +2,7 @@
  (name js_top_worker_rpc)
  (public_name js_top_worker-rpc)
  (modules idl rpc rpcmarshal toplevel_api_gen)
- (libraries rresult))
+ (libraries rresult mime_printer))
 
 (library
  (name js_top_worker_client)
@@ -16,6 +16,7 @@
  (enabled_if
   (>= %{ocaml_version} 4.12))
  (package js_top_worker_rpc_def)
+ (libraries mime_printer)
  (preprocess
   (pps ppx_deriving_rpc)))
 
