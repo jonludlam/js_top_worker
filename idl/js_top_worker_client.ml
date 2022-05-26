@@ -9,8 +9,13 @@ open Js_top_worker_rpc
 (** The assumption made in this module is that RPCs are answered in the order
     they are made. *)
 
+type encoding = Jsonrpc | Marshal
+
+type transport = Worker of Worker.t | Websocket of Websocket.t
+
 type context = {
-  worker : Worker.t;
+  transport : transport;
+  encoding : encoding;
   timeout : int;
   timeout_fn : unit -> unit;
   waiting : ((Rpc.response, exn) Result.t Lwt_mvar.t * int) Queue.t;
@@ -27,21 +32,37 @@ let demux context msg =
       | Some (mv, outstanding_execution) ->
           Brr.G.stop_timer outstanding_execution;
           let msg : string = Message.Ev.data (Brr.Ev.as_type msg) in
-          Lwt_mvar.put mv (Ok (Marshal.from_string msg 0)))
+          let response =
+            match context.encoding with
+            | Marshal -> Marshal.from_string msg 0
+            | Jsonrpc -> Jsonrpc.response_of_string msg
+          in
+          Lwt_mvar.put mv (Ok response))
+
+let terminate context =
+  match context.transport with
+  | Worker w -> Worker.terminate w
+  | Websocket w -> Websocket.close w
 
 let rpc : context -> Rpc.call -> Rpc.response Lwt.t =
  fun context call ->
   let open Lwt in
-  let jv = Marshal.to_bytes call [] in
+  let encoded_call = match context.encoding with
+    | Marshal -> Marshal.to_string call []
+    | Jsonrpc -> Jsonrpc.string_of_call call 
+  in
+  let jv = Jstr.v encoded_call in
   let mv = Lwt_mvar.create_empty () in
   let outstanding_execution =
     Brr.G.set_timeout ~ms:context.timeout (fun () ->
         Lwt.async (fun () -> Lwt_mvar.put mv (Error Timeout));
-        Worker.terminate context.worker;
+        terminate context;
         context.timeout_fn ())
   in
   Queue.push (mv, outstanding_execution) context.waiting;
-  Worker.post context.worker jv;
+  (match context.transport with
+  | Worker w -> Worker.post w jv;
+  | Websocket w -> Websocket.send_string w jv);
   Lwt_mvar.take mv >>= fun r ->
   match r with
   | Ok jv ->
@@ -51,9 +72,17 @@ let rpc : context -> Rpc.call -> Rpc.response Lwt.t =
 
 let start url timeout timeout_fn : rpc =
   let worker = Worker.create (Jstr.v url) in
-  let context = { worker; timeout; timeout_fn; waiting = Queue.create () } in
+  let context = { transport = Worker worker; encoding = Marshal; timeout; timeout_fn; waiting = Queue.create () } in
   let () =
     Brr.Ev.listen Message.Ev.message (demux context) (Worker.as_target worker)
+  in
+  rpc context
+
+let start_websocket url timeout timeout_fn : rpc =
+  let ws = Websocket.create (Jstr.v url) in
+  let context = { transport = Websocket ws; encoding = Jsonrpc; timeout; timeout_fn; waiting = Queue.create () } in
+  let () =
+    Brr.Ev.listen Message.Ev.message (demux context) (Websocket.as_target ws)
   in
   rpc context
 

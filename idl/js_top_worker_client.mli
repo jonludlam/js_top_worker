@@ -19,6 +19,13 @@ val start : string -> int -> (unit -> unit) -> rpc
     called when a timeout occurs. Returns the {!type-rpc} function used
     in the RPC calls. *)
 
+val start_websocket : string -> int -> (unit -> unit) -> rpc
+(** [start_websocket url timeout timeout_fn] starts a connection to a websocket
+    server at [url].  [timeout] is the number of seconds to wait
+    for a response from any RPC before raising an error, and [timeout_fn] is 
+    called when a timeout occurs. Returns the {!type-rpc} function used
+    in the RPC calls. *)
+
 module W : sig
   (** {2 Type declarations}
    

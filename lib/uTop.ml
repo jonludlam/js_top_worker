@@ -329,7 +329,10 @@ let () =
    | Compiler-libs re-exports                                        |
    +-----------------------------------------------------------------+ *)
 
-#if OCAML_VERSION >= (4, 08, 0)
+#if OCAML_VERSION >= (5, 0, 0)
+let get_load_path ()= Load_path.get_paths ()
+let set_load_path path= Load_path.init ~auto_include:Compmisc.auto_include path
+#elif OCAML_VERSION >= (4, 08, 0)
 let get_load_path ()= Load_path.get_paths ()
 let set_load_path path= Load_path.init path
 #else

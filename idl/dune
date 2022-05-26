@@ -7,8 +7,8 @@
 (library
  (name js_top_worker_client)
  (public_name js_top_worker-client)
- (modules js_top_worker_client)
- (libraries js_top_worker-rpc lwt brr))
+ (modules js_top_worker_client jsonrpc)
+ (libraries js_top_worker-rpc lwt brr yojson))
 
 (library
  (name js_top_worker_rpc_def)
