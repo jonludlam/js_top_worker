@@ -15,6 +15,7 @@ depends: [
   "js_top_worker" {= version}
   "js_top_worker-rpc" {= version}
   "lwt"
+  "yojson"
 ]
 build : [
   ["dune" "subst"] {pinned}
