@@ -32,11 +32,14 @@ let demux context msg =
       | None -> Lwt.return ()
       | Some (mv, outstanding_execution) ->
           Brr.G.stop_timer outstanding_execution;
-          let msg : string = Jstr.to_string @@ Message.Ev.data (Brr.Ev.as_type msg) in
           let response =
             match context.encoding with
-            | Marshal -> Marshal.from_string msg 0
-            | Jsonrpc -> Jsonrpc.response_of_string msg
+            | Marshal ->
+              let msg  = Message.Ev.data (Brr.Ev.as_type msg) in
+              Marshal.from_string msg 0
+            | Jsonrpc ->
+              let msg  = Message.Ev.data (Brr.Ev.as_type msg) in
+              Jsonrpc.response_of_string (Jstr.to_string msg)
           in
           Lwt_mvar.put mv (Ok response))
 
@@ -52,7 +55,6 @@ let rpc : context -> Rpc.call -> Rpc.response Lwt.t =
     | Marshal -> Marshal.to_string call []
     | Jsonrpc -> Jsonrpc.string_of_call call 
   in
-  let jv = Jstr.v encoded_call in
   let mv = Lwt_mvar.create_empty () in
   let outstanding_execution =
     Brr.G.set_timeout ~ms:context.timeout (fun () ->
@@ -62,14 +64,14 @@ let rpc : context -> Rpc.call -> Rpc.response Lwt.t =
   in
   Queue.push (mv, outstanding_execution) context.waiting;
   (match context.transport with
-  | Worker w -> Lwt.return @@ Worker.post w jv;
+  | Worker w -> Lwt.return @@ Worker.post w encoded_call;
   | Websocket w ->
     if Websocket.ready_state w = Websocket.Ready_state.open' then
-    Lwt.return @@ Websocket.send_string w jv
+    Lwt.return @@ Websocket.send_string w (Jstr.v encoded_call)
     else begin
       let p, r = Lwt.wait () in
       Brr.Ev.listen Brr.Ev.open' (fun _ -> Lwt.wakeup_later r ()) (Brr_io.Websocket.as_target w);
-      p >>= fun () -> Lwt.return @@ Websocket.send_string w jv
+      p >>= fun () -> Lwt.return @@ Websocket.send_string w (Jstr.v encoded_call)
     end) >>= fun () ->
   Lwt_mvar.take mv >>= fun r ->
   match r with
