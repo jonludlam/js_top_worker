@@ -27,11 +27,12 @@ exception Timeout
 
 let demux context msg =
   Lwt.async (fun () ->
+      Brr.Console.log [msg];
       match Queue.take_opt context.waiting with
       | None -> Lwt.return ()
       | Some (mv, outstanding_execution) ->
           Brr.G.stop_timer outstanding_execution;
-          let msg : string = Message.Ev.data (Brr.Ev.as_type msg) in
+          let msg : string = Jstr.to_string @@ Message.Ev.data (Brr.Ev.as_type msg) in
           let response =
             match context.encoding with
             | Marshal -> Marshal.from_string msg 0
@@ -61,8 +62,15 @@ let rpc : context -> Rpc.call -> Rpc.response Lwt.t =
   in
   Queue.push (mv, outstanding_execution) context.waiting;
   (match context.transport with
-  | Worker w -> Worker.post w jv;
-  | Websocket w -> Websocket.send_string w jv);
+  | Worker w -> Lwt.return @@ Worker.post w jv;
+  | Websocket w ->
+    if Websocket.ready_state w = Websocket.Ready_state.open' then
+    Lwt.return @@ Websocket.send_string w jv
+    else begin
+      let p, r = Lwt.wait () in
+      Brr.Ev.listen Brr.Ev.open' (fun _ -> Lwt.wakeup_later r ()) (Brr_io.Websocket.as_target w);
+      p >>= fun () -> Lwt.return @@ Websocket.send_string w jv
+    end) >>= fun () ->
   Lwt_mvar.take mv >>= fun r ->
   match r with
   | Ok jv ->
