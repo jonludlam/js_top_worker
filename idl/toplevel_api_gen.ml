@@ -253,61 +253,129 @@ include
     and _ = typ_of_mime_result
     and _ = mime_result
   end[@@ocaml.doc "@inline"][@@merlin.hide ]
+type exec_result_line =
+  | Stdout of string 
+  | Stderr of string 
+  | Sharp_ppf of string 
+  | Caml_ppf of string 
+  | Unified of string [@@deriving rpcty]
+include
+  struct
+    let _ = fun (_ : exec_result_line) -> ()
+    let rec typ_of_exec_result_line =
+      Rpc.Types.Variant
+        ({
+           Rpc.Types.vname = "exec_result_line";
+           Rpc.Types.variants =
+             [BoxedTag
+                {
+                  Rpc.Types.tname = "Stdout";
+                  Rpc.Types.tcontents =
+                    ((let open Rpc.Types in Basic String));
+                  Rpc.Types.tversion = None;
+                  Rpc.Types.tdescription = [];
+                  Rpc.Types.tpreview =
+                    ((function | Stdout a0 -> Some a0 | _ -> None));
+                  Rpc.Types.treview = ((function | a0 -> Stdout a0))
+                };
+             BoxedTag
+               {
+                 Rpc.Types.tname = "Stderr";
+                 Rpc.Types.tcontents = ((let open Rpc.Types in Basic String));
+                 Rpc.Types.tversion = None;
+                 Rpc.Types.tdescription = [];
+                 Rpc.Types.tpreview =
+                   ((function | Stderr a0 -> Some a0 | _ -> None));
+                 Rpc.Types.treview = ((function | a0 -> Stderr a0))
+               };
+             BoxedTag
+               {
+                 Rpc.Types.tname = "Sharp_ppf";
+                 Rpc.Types.tcontents = ((let open Rpc.Types in Basic String));
+                 Rpc.Types.tversion = None;
+                 Rpc.Types.tdescription = [];
+                 Rpc.Types.tpreview =
+                   ((function | Sharp_ppf a0 -> Some a0 | _ -> None));
+                 Rpc.Types.treview = ((function | a0 -> Sharp_ppf a0))
+               };
+             BoxedTag
+               {
+                 Rpc.Types.tname = "Caml_ppf";
+                 Rpc.Types.tcontents = ((let open Rpc.Types in Basic String));
+                 Rpc.Types.tversion = None;
+                 Rpc.Types.tdescription = [];
+                 Rpc.Types.tpreview =
+                   ((function | Caml_ppf a0 -> Some a0 | _ -> None));
+                 Rpc.Types.treview = ((function | a0 -> Caml_ppf a0))
+               };
+             BoxedTag
+               {
+                 Rpc.Types.tname = "Unified";
+                 Rpc.Types.tcontents = ((let open Rpc.Types in Basic String));
+                 Rpc.Types.tversion = None;
+                 Rpc.Types.tdescription = [];
+                 Rpc.Types.tpreview =
+                   ((function | Unified a0 -> Some a0 | _ -> None));
+                 Rpc.Types.treview = ((function | a0 -> Unified a0))
+               }];
+           Rpc.Types.vdefault = None;
+           Rpc.Types.vversion = None;
+           Rpc.Types.vconstructor =
+             (fun s' ->
+                fun t ->
+                  let s = String.lowercase_ascii s' in
+                  match s with
+                  | "stdout" ->
+                      Rresult.R.bind
+                        (t.tget (let open Rpc.Types in Basic String))
+                        (function | a0 -> Rresult.R.ok (Stdout a0))
+                  | "stderr" ->
+                      Rresult.R.bind
+                        (t.tget (let open Rpc.Types in Basic String))
+                        (function | a0 -> Rresult.R.ok (Stderr a0))
+                  | "sharp_ppf" ->
+                      Rresult.R.bind
+                        (t.tget (let open Rpc.Types in Basic String))
+                        (function | a0 -> Rresult.R.ok (Sharp_ppf a0))
+                  | "caml_ppf" ->
+                      Rresult.R.bind
+                        (t.tget (let open Rpc.Types in Basic String))
+                        (function | a0 -> Rresult.R.ok (Caml_ppf a0))
+                  | "unified" ->
+                      Rresult.R.bind
+                        (t.tget (let open Rpc.Types in Basic String))
+                        (function | a0 -> Rresult.R.ok (Unified a0))
+                  | _ ->
+                      Rresult.R.error_msg
+                        (Printf.sprintf "Unknown tag '%s'" s))
+         } : exec_result_line Rpc.Types.variant)
+    and exec_result_line =
+      {
+        Rpc.Types.name = "exec_result_line";
+        Rpc.Types.description = [];
+        Rpc.Types.ty = typ_of_exec_result_line
+      }
+    let _ = typ_of_exec_result_line
+    and _ = exec_result_line
+  end[@@ocaml.doc "@inline"][@@merlin.hide ]
 type exec_result =
   {
-  stdout: string option ;
-  stderr: string option ;
-  sharp_ppf: string option ;
-  caml_ppf: string option ;
+  output: exec_result_line list ;
   highlight: highlight option ;
   mime_results: mime_result list }[@@deriving rpcty][@@ocaml.doc
                                                       " Represents the result of executing a toplevel phrase "]
 include
   struct
     let _ = fun (_ : exec_result) -> ()
-    let rec (exec_result_stdout : (_, exec_result) Rpc.Types.field) =
+    let rec (exec_result_output : (_, exec_result) Rpc.Types.field) =
       {
-        Rpc.Types.fname = "stdout";
-        Rpc.Types.field =
-          (Rpc.Types.Option (let open Rpc.Types in Basic String));
+        Rpc.Types.fname = "output";
+        Rpc.Types.field = (Rpc.Types.List typ_of_exec_result_line);
         Rpc.Types.fdefault = None;
         Rpc.Types.fdescription = [];
         Rpc.Types.fversion = None;
-        Rpc.Types.fget = (fun _r -> _r.stdout);
-        Rpc.Types.fset = (fun v -> fun _s -> { _s with stdout = v })
-      }
-    and (exec_result_stderr : (_, exec_result) Rpc.Types.field) =
-      {
-        Rpc.Types.fname = "stderr";
-        Rpc.Types.field =
-          (Rpc.Types.Option (let open Rpc.Types in Basic String));
-        Rpc.Types.fdefault = None;
-        Rpc.Types.fdescription = [];
-        Rpc.Types.fversion = None;
-        Rpc.Types.fget = (fun _r -> _r.stderr);
-        Rpc.Types.fset = (fun v -> fun _s -> { _s with stderr = v })
-      }
-    and (exec_result_sharp_ppf : (_, exec_result) Rpc.Types.field) =
-      {
-        Rpc.Types.fname = "sharp_ppf";
-        Rpc.Types.field =
-          (Rpc.Types.Option (let open Rpc.Types in Basic String));
-        Rpc.Types.fdefault = None;
-        Rpc.Types.fdescription = [];
-        Rpc.Types.fversion = None;
-        Rpc.Types.fget = (fun _r -> _r.sharp_ppf);
-        Rpc.Types.fset = (fun v -> fun _s -> { _s with sharp_ppf = v })
-      }
-    and (exec_result_caml_ppf : (_, exec_result) Rpc.Types.field) =
-      {
-        Rpc.Types.fname = "caml_ppf";
-        Rpc.Types.field =
-          (Rpc.Types.Option (let open Rpc.Types in Basic String));
-        Rpc.Types.fdefault = None;
-        Rpc.Types.fdescription = [];
-        Rpc.Types.fversion = None;
-        Rpc.Types.fget = (fun _r -> _r.caml_ppf);
-        Rpc.Types.fset = (fun v -> fun _s -> { _s with caml_ppf = v })
+        Rpc.Types.fget = (fun _r -> _r.output);
+        Rpc.Types.fset = (fun v -> fun _s -> { _s with output = v })
       }
     and (exec_result_highlight : (_, exec_result) Rpc.Types.field) =
       {
@@ -333,10 +401,7 @@ include
       Rpc.Types.Struct
         ({
            Rpc.Types.fields =
-             [Rpc.Types.BoxedField exec_result_stdout;
-             Rpc.Types.BoxedField exec_result_stderr;
-             Rpc.Types.BoxedField exec_result_sharp_ppf;
-             Rpc.Types.BoxedField exec_result_caml_ppf;
+             [Rpc.Types.BoxedField exec_result_output;
              Rpc.Types.BoxedField exec_result_highlight;
              Rpc.Types.BoxedField exec_result_mime_results];
            Rpc.Types.sname = "exec_result";
@@ -352,44 +417,16 @@ include
                           (Rpc.Types.Option typ_of_highlight))
                          >>=
                          (fun exec_result_highlight ->
-                            (getter.Rpc.Types.field_get "caml_ppf"
-                               (Rpc.Types.Option
-                                  (let open Rpc.Types in Basic String)))
+                            (getter.Rpc.Types.field_get "output"
+                               (Rpc.Types.List typ_of_exec_result_line))
                               >>=
-                              (fun exec_result_caml_ppf ->
-                                 (getter.Rpc.Types.field_get "sharp_ppf"
-                                    (Rpc.Types.Option
-                                       (let open Rpc.Types in Basic String)))
-                                   >>=
-                                   (fun exec_result_sharp_ppf ->
-                                      (getter.Rpc.Types.field_get "stderr"
-                                         (Rpc.Types.Option
-                                            (let open Rpc.Types in
-                                               Basic String)))
-                                        >>=
-                                        (fun exec_result_stderr ->
-                                           (getter.Rpc.Types.field_get
-                                              "stdout"
-                                              (Rpc.Types.Option
-                                                 (let open Rpc.Types in
-                                                    Basic String)))
-                                             >>=
-                                             (fun exec_result_stdout ->
-                                                return
-                                                  {
-                                                    stdout =
-                                                      exec_result_stdout;
-                                                    stderr =
-                                                      exec_result_stderr;
-                                                    sharp_ppf =
-                                                      exec_result_sharp_ppf;
-                                                    caml_ppf =
-                                                      exec_result_caml_ppf;
-                                                    highlight =
-                                                      exec_result_highlight;
-                                                    mime_results =
-                                                      exec_result_mime_results
-                                                  })))))))
+                              (fun exec_result_output ->
+                                 return
+                                   {
+                                     output = exec_result_output;
+                                     highlight = exec_result_highlight;
+                                     mime_results = exec_result_mime_results
+                                   }))))
          } : exec_result Rpc.Types.structure)
     and exec_result =
       {
@@ -398,10 +435,7 @@ include
           ["Represents the result of executing a toplevel phrase"];
         Rpc.Types.ty = typ_of_exec_result
       }
-    let _ = exec_result_stdout
-    and _ = exec_result_stderr
-    and _ = exec_result_sharp_ppf
-    and _ = exec_result_caml_ppf
+    let _ = exec_result_output
     and _ = exec_result_highlight
     and _ = exec_result_mime_results
     and _ = typ_of_exec_result
@@ -665,9 +699,24 @@ module Make(R:RPC) =
             ["Functions for manipulating the toplevel worker thread"];
           version = (1, 0, 0)
         }
+    type sentence = string list[@@deriving rpcty]
+    include
+      struct
+        let _ = fun (_ : sentence) -> ()
+        let rec typ_of_sentence =
+          Rpc.Types.List (let open Rpc.Types in Basic String)
+        and sentence =
+          {
+            Rpc.Types.name = "sentence";
+            Rpc.Types.description = [];
+            Rpc.Types.ty = typ_of_sentence
+          }
+        let _ = typ_of_sentence
+        and _ = sentence
+      end[@@ocaml.doc "@inline"][@@merlin.hide ]
     let implementation = implement description
     let unit_p = Param.mk Types.unit
-    let phrase_p = Param.mk Types.string
+    let sentence_p = Param.mk sentence
     let typecheck_result_p = Param.mk exec_result
     let exec_result_p = Param.mk exec_result
     let completion_p = Param.mk completion_result
@@ -690,15 +739,15 @@ module Make(R:RPC) =
     let typecheck =
       declare "typecheck"
         ["Typecheck a phrase without actually executing it."]
-        (phrase_p @-> (returning typecheck_result_p err))
+        (sentence_p @-> (returning typecheck_result_p err))
     let exec =
       declare "exec"
         ["Execute a phrase using the toplevel. The toplevel must have been";
-        "Initialised first."] (phrase_p @-> (returning exec_result_p err))
+        "Initialised first."] (sentence_p @-> (returning exec_result_p err))
     let complete =
       declare "complete"
         ["Find completions of the incomplete phrase. Completion occurs at the";
         "end of the phrase passed in. If completion is required at a point";
         "other than the end of a string, then take the substring before calling";
-        "this API."] (phrase_p @-> (returning completion_p err))
+        "this API."] (sentence_p @-> (returning completion_p err))
   end

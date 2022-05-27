@@ -25,10 +25,12 @@ let initialise s callback =
   Lwt.return (Ok rpc)
 
 let log_output (o : Toplevel_api_gen.exec_result) =
-  Option.iter (fun s -> log ("stdout: " ^ s)) o.stdout;
-  Option.iter (fun s -> log ("stderr: " ^ s)) o.stderr;
-  Option.iter (fun s -> log ("sharp_ppf: " ^ s)) o.sharp_ppf;
-  Option.iter (fun s -> log ("caml_ppf: " ^ s)) o.caml_ppf;
+  List.iter (function
+    | Toplevel_api_gen.Stdout s -> log ("stdout: " ^s)
+    | Stderr s -> log ("stderr: "^s)
+    | Sharp_ppf s -> log ("sharp_ppf: "^s)
+    | Caml_ppf s -> log ("caml_ppf: "^s)
+    | Unified s -> log ("unified: " ^s)) o.output;
   List.iter
     (fun m -> insert_img m.Mime_printer.mime_type m.Mime_printer.data)
     o.mime_results;
@@ -50,12 +52,12 @@ let _ =
   let* rpc = initialise "worker.js" (fun _ -> log "Timeout") in
   let* o = W.setup rpc () in
   log_output o;
-  let* o = W.exec rpc "2*2;;" in
+  let* o = W.exec rpc ["2*2;;"] in
   log_output o;
   let* o =
     W.exec rpc
-      "Mime_printer.push ~encoding:Mime_printer.Base64 \"image/png\" \
-       \"iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg==\";;"
+      ["Mime_printer.push ~encoding:Mime_printer.Base64 \"image/png\" \
+       \"iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg==\";;"]
   in
   log_output o;
   Lwt.return (Ok ())

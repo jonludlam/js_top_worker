@@ -80,8 +80,7 @@ let setup_printers () =
   Topdirs.dir_install_printer Format.std_formatter
     Longident.(Lident "_print_unit")
 
-let stdout_buff = Buffer.create 100
-let stderr_buff = Buffer.create 100
+let output : Toplevel_api_gen.exec_result_line list ref = ref []
 
 (* RPC function implementations *)
 
@@ -94,13 +93,14 @@ module Server = Toplevel_api_gen.Make (IdlM.GenServer ())
    [IdlM.T] monad. The simplest way to do this is to use [IdlM.ErrM.return] for
    the success case and [IdlM.ErrM.return_err] for the failure case *)
 
-let buff_opt b = match Buffer.contents b with "" -> None | s -> Some s
+let mk_pp mk =
+  let b = Buffer.create 100 in
+  Format.make_formatter (fun str start len -> Buffer.add_string b (String.sub str start len))
+    (fun () -> output := mk (Buffer.contents b) :: !output; Buffer.clear b)
 
 let execute =
-  let code_buff = Buffer.create 100 in
-  let res_buff = Buffer.create 100 in
-  let pp_code = Format.formatter_of_buffer code_buff in
-  let pp_result = Format.formatter_of_buffer res_buff in
+  let pp_code = mk_pp (fun x -> Toplevel_api_gen.Sharp_ppf x) in
+  let pp_result = mk_pp (fun x -> Toplevel_api_gen.Caml_ppf x) in
   let highlighted = ref None in
   let highlight_location loc =
     let _file1, line1, col1 = Location.get_pos_info loc.Location.loc_start in
@@ -108,20 +108,16 @@ let execute =
     highlighted := Some Toplevel_api_gen.{ line1; col1; line2; col2 }
   in
   fun phrase ->
-    Buffer.clear code_buff;
-    Buffer.clear res_buff;
-    Buffer.clear stderr_buff;
-    Buffer.clear stdout_buff;
-    JsooTop.execute true ~pp_code ~highlight_location pp_result phrase;
+    output := [];
+    JsooTop.execute true ~pp_code ~highlight_location pp_result (String.concat "\n" phrase);
     Format.pp_print_flush pp_code ();
     Format.pp_print_flush pp_result ();
+    let out = List.rev !output in
+    output := [];
     IdlM.ErrM.return
       Toplevel_api_gen.
         {
-          stdout = buff_opt stdout_buff;
-          stderr = buff_opt stderr_buff;
-          sharp_ppf = buff_opt code_buff;
-          caml_ppf = buff_opt res_buff;
+          output = out;
           highlight = !highlighted;
           mime_results = Mime_printer.get ();
         }
@@ -232,19 +228,18 @@ let init (init_libs : Toplevel_api_gen.init_libs) =
 let setup () =
   let open Js_of_ocaml in
   try
-    Sys_js.set_channel_flusher stdout (Buffer.add_string stdout_buff);
-    Sys_js.set_channel_flusher stderr (Buffer.add_string stderr_buff);
+    Sys_js.set_channel_flusher stdout (fun s -> output := Toplevel_api_gen.Stdout s :: !output);
+    Sys_js.set_channel_flusher stderr (fun s -> output := Toplevel_api_gen.Stderr s :: !output);
     (match !functions with
     | Some l -> setup l ()
     | None -> failwith "Error: toplevel has not been initialised");
     setup_printers ();
+    let out = List.rev !output in
+    output := [];
     IdlM.ErrM.return
       Toplevel_api_gen.
         {
-          stdout = buff_opt stdout_buff;
-          stderr = buff_opt stderr_buff;
-          sharp_ppf = None;
-          caml_ppf = None;
+          output = out;
           highlight = None;
           mime_results = [];
         }
@@ -252,6 +247,7 @@ let setup () =
     IdlM.ErrM.return_err (Toplevel_api_gen.InternalError (Printexc.to_string e))
 
 let complete phrase =
+  let phrase = String.concat "\n" phrase in
   let contains_double_underscore s =
     let len = String.length s in
     let rec aux i =
@@ -312,18 +308,16 @@ let refill_lexbuf s p ppf buffer len =
     len''
 
 let typecheck_phrase =
-  let res_buff = Buffer.create 100 in
-  let pp_result = Format.formatter_of_buffer res_buff in
   let highlighted = ref None in
   let highlight_location loc =
     let _file1, line1, col1 = Location.get_pos_info loc.Location.loc_start in
     let _file2, line2, col2 = Location.get_pos_info loc.Location.loc_end in
     highlighted := Some Toplevel_api_gen.{ line1; col1; line2; col2 }
   in
+  let pp_result = mk_pp (fun x -> Toplevel_api_gen.Caml_ppf x) in
   fun phr ->
-    Buffer.clear res_buff;
-    Buffer.clear stderr_buff;
-    Buffer.clear stdout_buff;
+    let phr = String.concat "\n" phr in
+    output := [];
     try
       let lb = Lexing.from_function (refill_lexbuf phr (ref 0) None) in
       let phr = !Toploop.parse_toplevel_phrase lb in
@@ -350,12 +344,11 @@ let typecheck_phrase =
         Format.pp_print_flush pp_result ();
         Warnings.check_fatal ();
         flush_all ();
+        let out = List.rev !output in
+        output := [];
         IdlM.ErrM.return
           Toplevel_api_gen.
-            { stdout = buff_opt stdout_buff
-            ; stderr = buff_opt stderr_buff
-            ; sharp_ppf = None
-            ; caml_ppf = buff_opt res_buff
+            { output = out
             ; highlight = !highlighted
             ; mime_results = []
             }
@@ -365,12 +358,11 @@ let typecheck_phrase =
     | x ->
       (match loc x with None -> () | Some loc -> highlight_location loc);
       Errors.report_error Format.err_formatter x;
+      let out = List.rev !output in
+      output := [];
       IdlM.ErrM.return
         Toplevel_api_gen.
-          { stdout = buff_opt stdout_buff
-          ; stderr = buff_opt stderr_buff
-          ; sharp_ppf = None
-          ; caml_ppf = buff_opt res_buff
+          { output = out
           ; highlight = !highlighted
           ; mime_results = []
           }

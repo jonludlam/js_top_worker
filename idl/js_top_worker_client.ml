@@ -117,17 +117,17 @@ module W : sig
 
   val typecheck :
     rpc ->
-    string ->
+    string list ->
     (Toplevel_api_gen.exec_result, Toplevel_api_gen.err) result Lwt.t
 
   val exec :
     rpc ->
-    string ->
+    string list ->
     (Toplevel_api_gen.exec_result, Toplevel_api_gen.err) result Lwt.t
 
   val complete :
     rpc ->
-    string ->
+    string list ->
     (Toplevel_api_gen.completion_result, Toplevel_api_gen.err) result Lwt.t
 end = struct
   type init_libs = Toplevel_api_gen.init_libs

@@ -16,11 +16,16 @@ type mime_result = Mime_printer.t = {
 }
 [@@deriving rpcty]
 
+type exec_result_line =
+  | Stdout of string
+  | Stderr of string
+  | Sharp_ppf of string
+  | Caml_ppf of string
+  | Unified of string
+[@@deriving rpcty]
+
 type exec_result = {
-  stdout : string option;
-  stderr : string option;
-  sharp_ppf : string option;
-  caml_ppf : string option;
+  output : exec_result_line list;
   highlight : highlight option;
   mime_results : mime_result list;
 }
@@ -67,9 +72,11 @@ module Make (R : RPC) = struct
         version = (1, 0, 0);
       }
 
+  type sentence = string list [@@deriving rpcty]
+
   let implementation = implement description
   let unit_p = Param.mk Types.unit
-  let phrase_p = Param.mk Types.string
+  let sentence_p = Param.mk sentence
   let typecheck_result_p = Param.mk exec_result
   let exec_result_p = Param.mk exec_result
   let completion_p = Param.mk completion_result
@@ -101,7 +108,7 @@ module Make (R : RPC) = struct
   let typecheck =
     declare "typecheck"
       [ "Typecheck a phrase without actually executing it." ]
-      (phrase_p @-> returning typecheck_result_p err)
+      (sentence_p @-> returning typecheck_result_p err)
 
   let exec =
     declare "exec"
@@ -109,7 +116,7 @@ module Make (R : RPC) = struct
         "Execute a phrase using the toplevel. The toplevel must have been";
         "Initialised first.";
       ]
-      (phrase_p @-> returning exec_result_p err)
+      (sentence_p @-> returning exec_result_p err)
 
   let complete =
     declare "complete"
@@ -119,5 +126,5 @@ module Make (R : RPC) = struct
         "other than the end of a string, then take the substring before calling";
         "this API.";
       ]
-      (phrase_p @-> returning completion_p err)
+      (sentence_p @-> returning completion_p err)
 end

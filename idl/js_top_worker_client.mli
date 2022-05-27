@@ -52,15 +52,15 @@ module W : sig
       printed when starting a toplevel. Note that the toplevel
       must be initialised first. *)
 
-  val typecheck : rpc -> string -> (exec_result, err) result Lwt.t
+  val typecheck : rpc -> string list -> (exec_result, err) result Lwt.t
   (** Typecheck a phrase using the toplevel. The toplevel must have been
       initialised first. *)
 
-  val exec : rpc -> string -> (exec_result, err) result Lwt.t
+  val exec : rpc -> string list -> (exec_result, err) result Lwt.t
   (** Execute a phrase using the toplevel. The toplevel must have been
       initialised first. *)
 
-  val complete : rpc -> string -> (completion_result, err) result Lwt.t
+  val complete : rpc -> string list -> (completion_result, err) result Lwt.t
   (** Find completions of the incomplete phrase. Completion occurs at the
     end of the phrase passed in. If completion is required at a point
     other than the end of a string, then take the substring before calling
