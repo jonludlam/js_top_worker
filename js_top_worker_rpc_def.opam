@@ -19,4 +19,3 @@ synopsis: "JS Toplevel worker IDL generator"
 description: """
 An OCaml toplevel designed to run as a web worker: IDL generator edition
 """
-

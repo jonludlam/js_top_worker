@@ -52,7 +52,7 @@ let rpc : context -> Rpc.call -> Rpc.response Lwt.t =
 let start url timeout timeout_fn : rpc =
   let worker = Worker.create (Jstr.v url) in
   let context = { worker; timeout; timeout_fn; waiting = Queue.create () } in
-  let () =
+  let _listener =
     Brr.Ev.listen Message.Ev.message (demux context) (Worker.as_target worker)
   in
   rpc context
