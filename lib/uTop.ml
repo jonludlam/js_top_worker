@@ -32,6 +32,15 @@ let keywords = ref (String_set.of_list default_keywords)
 let add_keyword kwd = keywords := String_set.add kwd !keywords
 
 (* +-----------------------------------------------------------------+
+   | Span of Lines                                                   |
+   +-----------------------------------------------------------------+ *)
+
+type lines = {
+  start: int;
+  stop:  int;
+}
+
+(* +-----------------------------------------------------------------+
    | Error reporting                                                 |
    +-----------------------------------------------------------------+ *)
 
@@ -52,9 +61,22 @@ let get_ocaml_error_message exn =
     Scanf.sscanf
       str
       "Characters %d-%d:\n%[\000-\255]"
-      (fun start stop msg -> ((start, stop), msg))
-  with _ ->
-    ((0, 0), str)
+      (fun start stop msg -> ((start, stop), msg, None))
+  with Scanf.Scan_failure(_) ->
+  try
+    Scanf.sscanf
+      str
+      "Line %d, characters %d-%d:\n%[\000-\255]"
+      (fun line start stop msg -> ((start, stop), msg, Some{start=line; stop=line}))
+  with Scanf.Scan_failure(_) ->
+  try
+    Scanf.sscanf
+      str
+      "Lines %d-%d, characters %d-%d:\n%[\000-\255]"
+      (fun start_line stop_line start stop msg -> ((start, stop),
+                                                   msg, Some{start=start_line;stop=stop_line}))
+  with Scanf.Scan_failure(_) ->
+    ((0, 0), str, None)
 
 let collect_formatters buf pps f =
   (* First flush all formatters. *)
@@ -167,14 +189,10 @@ let parse_default parse str eos_is_error =
         (* If the string is empty, do not report an error. *)
         raise Need_more
     | Lexer.Error (error, loc) ->
-#if OCAML_VERSION >= (4, 08, 0)
         (match Location.error_of_exn (Lexer.Error (error, loc)) with
         | Some (`Ok error)->
           Error ([mkloc loc], get_message Location.print_report error)
         | _-> raise Need_more)
-#else
-        Error ([mkloc loc], get_message Lexer.report_error error)
-#endif
     | Syntaxerr.Error error -> begin
       match error with
       | Syntaxerr.Unclosed (opening_loc, opening, closing_loc, closing) ->
@@ -198,10 +216,16 @@ let parse_default parse str eos_is_error =
       | Syntaxerr.Ill_formed_ast (loc, s) ->
           Error ([mkloc loc],
                  Printf.sprintf "Error: broken invariant in parsetree: %s" s)
-#if OCAML_VERSION >= (4, 03, 0)
       | Syntaxerr.Invalid_package_type (loc, s) ->
           Error ([mkloc loc],
                  Printf.sprintf "Invalid package type: %s" s)
+#if OCAML_VERSION >= (5, 0, 0)
+      | Syntaxerr.Removed_string_set loc ->
+          Error ([mkloc loc],
+            "Syntax error: strings are immutable, there is no assignment \
+             syntax for them.\n\
+             Hint: Mutable sequences of bytes are available in the Bytes module.\n\
+             Hint: Did you mean to use 'Bytes.set'?")
 #endif
     end
     | Syntaxerr.Escape_error | Parsing.Parse_error ->
@@ -231,12 +255,6 @@ let with_loc loc str = {
   Location.loc = loc;
 }
 
-#if OCAML_VERSION >= (4, 03, 0)
-let nolabel = Asttypes.Nolabel
-#else
-let nolabel = ""
-#endif
-
 (* Check that the given phrase can be evaluated without typing/compile
    errors. *)
 let check_phrase phrase =
@@ -263,7 +281,7 @@ let check_phrase phrase =
           with_default_loc loc
             (fun () ->
                Str.eval
-                 (Exp.fun_ nolabel None (Pat.construct unit None)
+                 (Exp.fun_ Nolabel None (Pat.construct unit None)
                    (Exp.letmodule (with_loc loc
                         #if OCAML_VERSION >= (4, 10, 0)
                         (Some "_")
@@ -287,10 +305,10 @@ let check_phrase phrase =
           None
         with exn ->
           (* The phrase contains errors. *)
-          let loc, msg = get_ocaml_error_message exn in
+          let loc, msg, line = get_ocaml_error_message exn in
           Toploop.toplevel_env := env;
           Btype.backtrack snap;
-          Some ([loc], msg)
+          Some ([loc], msg, [line])
 
 
 
@@ -329,11 +347,11 @@ let () =
    | Compiler-libs re-exports                                        |
    +-----------------------------------------------------------------+ *)
 
-#if OCAML_VERSION >= (4, 08, 0)
-let get_load_path ()= Load_path.get_paths ()
-let set_load_path path= Load_path.init path
-#else
-let get_load_path ()= !Config.load_path
-let set_load_path path= Config.load_path := path
-#endif
+let get_load_path () = Load_path.get_paths ()
 
+#if OCAML_VERSION >= (5, 0, 0)
+let set_load_path path =
+  Load_path.init path ~auto_include:Load_path.no_auto_include
+#else
+let set_load_path path = Load_path.init path
+#endif

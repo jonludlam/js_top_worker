@@ -14,7 +14,7 @@
  (public_name js-top-worker)
  (modules worker uTop_complete uTop_lexer uTop_token uTop)
  (libraries
-  js_top_worker-rpc
+  js-top-worker.rpc
   js_of_ocaml-toplevel
   js_of_ocaml-compiler
   astring)
