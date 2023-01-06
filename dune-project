@@ -12,6 +12,8 @@
   (js_of_ocaml
    (>= 3.11.0))
   rresult
+  brr
+  lwt
   astring
   ppx_deriving_rpc
   js_of_ocaml-toplevel
