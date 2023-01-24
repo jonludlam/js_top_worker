@@ -8,13 +8,21 @@ bug-reports: "https://github.com/jonludlam/js_top_worker/issues"
 depends: [
   "ocaml" {>= "4.04"}
   "dune" {>= "2.9.1"}
+  "js_of_ocaml" {>= "3.11.0"}
   "rresult"
+  "astring"
+  "lwt"
+  "brr"
+  "ppx_deriving_rpc"
+  "js_of_ocaml-toplevel"
+  "js_of_ocaml-compiler"
+  "js_of_ocaml-ppx"
 ]
 build : [
   ["dune" "subst"] {pinned}
   ["dune" "build" "-p" name "-j" jobs]
 ]
-synopsis: "JS Toplevel worker - RPC functions"
+synopsis: "JS Toplevel worker"
 description: """
 An OCaml toplevel designed to run as a web worker
 """
