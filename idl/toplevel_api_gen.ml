@@ -26,7 +26,7 @@ type highlight = {
 include
   struct
     let _ = fun (_ : highlight) -> ()
-    let rec (highlight_line1 : (_, highlight) Rpc.Types.field) =
+    let rec highlight_line1 : (_, highlight) Rpc.Types.field =
       {
         Rpc.Types.fname = "line1";
         Rpc.Types.field = (let open Rpc.Types in Basic Int);
@@ -36,7 +36,7 @@ include
         Rpc.Types.fget = (fun _r -> _r.line1);
         Rpc.Types.fset = (fun v -> fun _s -> { _s with line1 = v })
       }
-    and (highlight_line2 : (_, highlight) Rpc.Types.field) =
+    and highlight_line2 : (_, highlight) Rpc.Types.field =
       {
         Rpc.Types.fname = "line2";
         Rpc.Types.field = (let open Rpc.Types in Basic Int);
@@ -46,7 +46,7 @@ include
         Rpc.Types.fget = (fun _r -> _r.line2);
         Rpc.Types.fset = (fun v -> fun _s -> { _s with line2 = v })
       }
-    and (highlight_col1 : (_, highlight) Rpc.Types.field) =
+    and highlight_col1 : (_, highlight) Rpc.Types.field =
       {
         Rpc.Types.fname = "col1";
         Rpc.Types.field = (let open Rpc.Types in Basic Int);
@@ -56,7 +56,7 @@ include
         Rpc.Types.fget = (fun _r -> _r.col1);
         Rpc.Types.fset = (fun v -> fun _s -> { _s with col1 = v })
       }
-    and (highlight_col2 : (_, highlight) Rpc.Types.field) =
+    and highlight_col2 : (_, highlight) Rpc.Types.field =
       {
         Rpc.Types.fname = "col2";
         Rpc.Types.field = (let open Rpc.Types in Basic Int);
@@ -116,18 +116,156 @@ include
     and _ = typ_of_highlight
     and _ = highlight
   end[@@ocaml.doc "@inline"][@@merlin.hide ]
+type encoding = Mime_printer.encoding =
+  | Noencoding 
+  | Base64 [@@ocaml.doc " An area to be highlighted "][@@deriving rpcty]
+include
+  struct
+    let _ = fun (_ : encoding) -> ()
+    let rec typ_of_encoding =
+      Rpc.Types.Variant
+        ({
+           Rpc.Types.vname = "encoding";
+           Rpc.Types.variants =
+             [BoxedTag
+                {
+                  Rpc.Types.tname = "Noencoding";
+                  Rpc.Types.tcontents = Unit;
+                  Rpc.Types.tversion = None;
+                  Rpc.Types.tdescription = [];
+                  Rpc.Types.tpreview =
+                    ((function | Noencoding -> Some () | _ -> None));
+                  Rpc.Types.treview = ((function | () -> Noencoding))
+                };
+             BoxedTag
+               {
+                 Rpc.Types.tname = "Base64";
+                 Rpc.Types.tcontents = Unit;
+                 Rpc.Types.tversion = None;
+                 Rpc.Types.tdescription = [];
+                 Rpc.Types.tpreview =
+                   ((function | Base64 -> Some () | _ -> None));
+                 Rpc.Types.treview = ((function | () -> Base64))
+               }];
+           Rpc.Types.vdefault = None;
+           Rpc.Types.vversion = None;
+           Rpc.Types.vconstructor =
+             (fun s' ->
+                fun t ->
+                  let s = String.lowercase_ascii s' in
+                  match s with
+                  | "noencoding" ->
+                      Rresult.R.bind (t.tget Unit)
+                        (function | () -> Rresult.R.ok Noencoding)
+                  | "base64" ->
+                      Rresult.R.bind (t.tget Unit)
+                        (function | () -> Rresult.R.ok Base64)
+                  | _ ->
+                      Rresult.R.error_msg
+                        (Printf.sprintf "Unknown tag '%s'" s))
+         } : encoding Rpc.Types.variant)
+    and encoding =
+      {
+        Rpc.Types.name = "encoding";
+        Rpc.Types.description = ["An area to be highlighted"];
+        Rpc.Types.ty = typ_of_encoding
+      }
+    let _ = typ_of_encoding
+    and _ = encoding
+  end[@@ocaml.doc "@inline"][@@merlin.hide ]
+type mime_val = Mime_printer.t =
+  {
+  mime_type: string ;
+  encoding: encoding ;
+  data: string }[@@deriving rpcty]
+include
+  struct
+    let _ = fun (_ : mime_val) -> ()
+    let rec mime_val_mime_type : (_, mime_val) Rpc.Types.field =
+      {
+        Rpc.Types.fname = "mime_type";
+        Rpc.Types.field = (let open Rpc.Types in Basic String);
+        Rpc.Types.fdefault = None;
+        Rpc.Types.fdescription = [];
+        Rpc.Types.fversion = None;
+        Rpc.Types.fget = (fun _r -> _r.mime_type);
+        Rpc.Types.fset = (fun v -> fun _s -> { _s with mime_type = v })
+      }
+    and mime_val_encoding : (_, mime_val) Rpc.Types.field =
+      {
+        Rpc.Types.fname = "encoding";
+        Rpc.Types.field = typ_of_encoding;
+        Rpc.Types.fdefault = None;
+        Rpc.Types.fdescription = [];
+        Rpc.Types.fversion = None;
+        Rpc.Types.fget = (fun _r -> _r.encoding);
+        Rpc.Types.fset = (fun v -> fun _s -> { _s with encoding = v })
+      }
+    and mime_val_data : (_, mime_val) Rpc.Types.field =
+      {
+        Rpc.Types.fname = "data";
+        Rpc.Types.field = (let open Rpc.Types in Basic String);
+        Rpc.Types.fdefault = None;
+        Rpc.Types.fdescription = [];
+        Rpc.Types.fversion = None;
+        Rpc.Types.fget = (fun _r -> _r.data);
+        Rpc.Types.fset = (fun v -> fun _s -> { _s with data = v })
+      }
+    and typ_of_mime_val =
+      Rpc.Types.Struct
+        ({
+           Rpc.Types.fields =
+             [Rpc.Types.BoxedField mime_val_mime_type;
+             Rpc.Types.BoxedField mime_val_encoding;
+             Rpc.Types.BoxedField mime_val_data];
+           Rpc.Types.sname = "mime_val";
+           Rpc.Types.version = None;
+           Rpc.Types.constructor =
+             (fun getter ->
+                let open Rresult.R in
+                  (getter.Rpc.Types.field_get "data"
+                     (let open Rpc.Types in Basic String))
+                    >>=
+                    (fun mime_val_data ->
+                       (getter.Rpc.Types.field_get "encoding" typ_of_encoding)
+                         >>=
+                         (fun mime_val_encoding ->
+                            (getter.Rpc.Types.field_get "mime_type"
+                               (let open Rpc.Types in Basic String))
+                              >>=
+                              (fun mime_val_mime_type ->
+                                 return
+                                   {
+                                     mime_type = mime_val_mime_type;
+                                     encoding = mime_val_encoding;
+                                     data = mime_val_data
+                                   }))))
+         } : mime_val Rpc.Types.structure)
+    and mime_val =
+      {
+        Rpc.Types.name = "mime_val";
+        Rpc.Types.description = [];
+        Rpc.Types.ty = typ_of_mime_val
+      }
+    let _ = mime_val_mime_type
+    and _ = mime_val_encoding
+    and _ = mime_val_data
+    and _ = typ_of_mime_val
+    and _ = mime_val
+  end[@@ocaml.doc "@inline"][@@merlin.hide ]
 type exec_result =
   {
   stdout: string option ;
   stderr: string option ;
   sharp_ppf: string option ;
   caml_ppf: string option ;
-  highlight: highlight option }[@@deriving rpcty][@@ocaml.doc
-                                                   " Represents the result of executing a toplevel phrase "]
+  highlight: highlight option ;
+  mime_vals: mime_val list }[@@deriving rpcty][@@ocaml.doc
+                                                " Represents the result of executing a toplevel phrase "]
 include
   struct
     let _ = fun (_ : exec_result) -> ()
-    let rec (exec_result_stdout : (_, exec_result) Rpc.Types.field) =
+    let rec exec_result_stdout : (_, exec_result) Rpc.Types.field =
       {
         Rpc.Types.fname = "stdout";
         Rpc.Types.field =
@@ -138,7 +276,7 @@ include
         Rpc.Types.fget = (fun _r -> _r.stdout);
         Rpc.Types.fset = (fun v -> fun _s -> { _s with stdout = v })
       }
-    and (exec_result_stderr : (_, exec_result) Rpc.Types.field) =
+    and exec_result_stderr : (_, exec_result) Rpc.Types.field =
       {
         Rpc.Types.fname = "stderr";
         Rpc.Types.field =
@@ -149,7 +287,7 @@ include
         Rpc.Types.fget = (fun _r -> _r.stderr);
         Rpc.Types.fset = (fun v -> fun _s -> { _s with stderr = v })
       }
-    and (exec_result_sharp_ppf : (_, exec_result) Rpc.Types.field) =
+    and exec_result_sharp_ppf : (_, exec_result) Rpc.Types.field =
       {
         Rpc.Types.fname = "sharp_ppf";
         Rpc.Types.field =
@@ -160,7 +298,7 @@ include
         Rpc.Types.fget = (fun _r -> _r.sharp_ppf);
         Rpc.Types.fset = (fun v -> fun _s -> { _s with sharp_ppf = v })
       }
-    and (exec_result_caml_ppf : (_, exec_result) Rpc.Types.field) =
+    and exec_result_caml_ppf : (_, exec_result) Rpc.Types.field =
       {
         Rpc.Types.fname = "caml_ppf";
         Rpc.Types.field =
@@ -171,7 +309,7 @@ include
         Rpc.Types.fget = (fun _r -> _r.caml_ppf);
         Rpc.Types.fset = (fun v -> fun _s -> { _s with caml_ppf = v })
       }
-    and (exec_result_highlight : (_, exec_result) Rpc.Types.field) =
+    and exec_result_highlight : (_, exec_result) Rpc.Types.field =
       {
         Rpc.Types.fname = "highlight";
         Rpc.Types.field = (Rpc.Types.Option typ_of_highlight);
@@ -181,6 +319,16 @@ include
         Rpc.Types.fget = (fun _r -> _r.highlight);
         Rpc.Types.fset = (fun v -> fun _s -> { _s with highlight = v })
       }
+    and exec_result_mime_vals : (_, exec_result) Rpc.Types.field =
+      {
+        Rpc.Types.fname = "mime_vals";
+        Rpc.Types.field = (Rpc.Types.List typ_of_mime_val);
+        Rpc.Types.fdefault = None;
+        Rpc.Types.fdescription = [];
+        Rpc.Types.fversion = None;
+        Rpc.Types.fget = (fun _r -> _r.mime_vals);
+        Rpc.Types.fset = (fun v -> fun _s -> { _s with mime_vals = v })
+      }
     and typ_of_exec_result =
       Rpc.Types.Struct
         ({
@@ -189,48 +337,59 @@ include
              Rpc.Types.BoxedField exec_result_stderr;
              Rpc.Types.BoxedField exec_result_sharp_ppf;
              Rpc.Types.BoxedField exec_result_caml_ppf;
-             Rpc.Types.BoxedField exec_result_highlight];
+             Rpc.Types.BoxedField exec_result_highlight;
+             Rpc.Types.BoxedField exec_result_mime_vals];
            Rpc.Types.sname = "exec_result";
            Rpc.Types.version = None;
            Rpc.Types.constructor =
              (fun getter ->
                 let open Rresult.R in
-                  (getter.Rpc.Types.field_get "highlight"
-                     (Rpc.Types.Option typ_of_highlight))
+                  (getter.Rpc.Types.field_get "mime_vals"
+                     (Rpc.Types.List typ_of_mime_val))
                     >>=
-                    (fun exec_result_highlight ->
-                       (getter.Rpc.Types.field_get "caml_ppf"
-                          (Rpc.Types.Option
-                             (let open Rpc.Types in Basic String)))
+                    (fun exec_result_mime_vals ->
+                       (getter.Rpc.Types.field_get "highlight"
+                          (Rpc.Types.Option typ_of_highlight))
                          >>=
-                         (fun exec_result_caml_ppf ->
-                            (getter.Rpc.Types.field_get "sharp_ppf"
+                         (fun exec_result_highlight ->
+                            (getter.Rpc.Types.field_get "caml_ppf"
                                (Rpc.Types.Option
                                   (let open Rpc.Types in Basic String)))
                               >>=
-                              (fun exec_result_sharp_ppf ->
-                                 (getter.Rpc.Types.field_get "stderr"
+                              (fun exec_result_caml_ppf ->
+                                 (getter.Rpc.Types.field_get "sharp_ppf"
                                     (Rpc.Types.Option
                                        (let open Rpc.Types in Basic String)))
                                    >>=
-                                   (fun exec_result_stderr ->
-                                      (getter.Rpc.Types.field_get "stdout"
+                                   (fun exec_result_sharp_ppf ->
+                                      (getter.Rpc.Types.field_get "stderr"
                                          (Rpc.Types.Option
                                             (let open Rpc.Types in
                                                Basic String)))
                                         >>=
-                                        (fun exec_result_stdout ->
-                                           return
-                                             {
-                                               stdout = exec_result_stdout;
-                                               stderr = exec_result_stderr;
-                                               sharp_ppf =
-                                                 exec_result_sharp_ppf;
-                                               caml_ppf =
-                                                 exec_result_caml_ppf;
-                                               highlight =
-                                                 exec_result_highlight
-                                             }))))))
+                                        (fun exec_result_stderr ->
+                                           (getter.Rpc.Types.field_get
+                                              "stdout"
+                                              (Rpc.Types.Option
+                                                 (let open Rpc.Types in
+                                                    Basic String)))
+                                             >>=
+                                             (fun exec_result_stdout ->
+                                                return
+                                                  {
+                                                    stdout =
+                                                      exec_result_stdout;
+                                                    stderr =
+                                                      exec_result_stderr;
+                                                    sharp_ppf =
+                                                      exec_result_sharp_ppf;
+                                                    caml_ppf =
+                                                      exec_result_caml_ppf;
+                                                    highlight =
+                                                      exec_result_highlight;
+                                                    mime_vals =
+                                                      exec_result_mime_vals
+                                                  })))))))
          } : exec_result Rpc.Types.structure)
     and exec_result =
       {
@@ -244,6 +403,7 @@ include
     and _ = exec_result_sharp_ppf
     and _ = exec_result_caml_ppf
     and _ = exec_result_highlight
+    and _ = exec_result_mime_vals
     and _ = typ_of_exec_result
     and _ = exec_result
   end[@@ocaml.doc "@inline"][@@merlin.hide ]
@@ -257,7 +417,7 @@ type completion_result =
 include
   struct
     let _ = fun (_ : completion_result) -> ()
-    let rec (completion_result_n : (_, completion_result) Rpc.Types.field) =
+    let rec completion_result_n : (_, completion_result) Rpc.Types.field =
       {
         Rpc.Types.fname = "n";
         Rpc.Types.field = (let open Rpc.Types in Basic Int);
@@ -269,8 +429,8 @@ include
         Rpc.Types.fget = (fun _r -> _r.n);
         Rpc.Types.fset = (fun v -> fun _s -> { _s with n = v })
       }
-    and (completion_result_completions :
-      (_, completion_result) Rpc.Types.field) =
+    and completion_result_completions :
+      (_, completion_result) Rpc.Types.field =
       {
         Rpc.Types.fname = "completions";
         Rpc.Types.field =
@@ -325,7 +485,7 @@ type cma =
 include
   struct
     let _ = fun (_ : cma) -> ()
-    let rec (cma_url : (_, cma) Rpc.Types.field) =
+    let rec cma_url : (_, cma) Rpc.Types.field =
       {
         Rpc.Types.fname = "url";
         Rpc.Types.field = (let open Rpc.Types in Basic String);
@@ -335,7 +495,7 @@ include
         Rpc.Types.fget = (fun _r -> _r.url);
         Rpc.Types.fset = (fun v -> fun _s -> { _s with url = v })
       }
-    and (cma_fn : (_, cma) Rpc.Types.field) =
+    and cma_fn : (_, cma) Rpc.Types.field =
       {
         Rpc.Types.fname = "fn";
         Rpc.Types.field = (let open Rpc.Types in Basic String);
@@ -382,7 +542,7 @@ type init_libs = {
 include
   struct
     let _ = fun (_ : init_libs) -> ()
-    let rec (init_libs_cmi_urls : (_, init_libs) Rpc.Types.field) =
+    let rec init_libs_cmi_urls : (_, init_libs) Rpc.Types.field =
       {
         Rpc.Types.fname = "cmi_urls";
         Rpc.Types.field =
@@ -393,7 +553,7 @@ include
         Rpc.Types.fget = (fun _r -> _r.cmi_urls);
         Rpc.Types.fset = (fun v -> fun _s -> { _s with cmi_urls = v })
       }
-    and (init_libs_cmas : (_, init_libs) Rpc.Types.field) =
+    and init_libs_cmas : (_, init_libs) Rpc.Types.field =
       {
         Rpc.Types.fname = "cmas";
         Rpc.Types.field = (Rpc.Types.List typ_of_cma);

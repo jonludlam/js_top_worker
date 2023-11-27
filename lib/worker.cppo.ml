@@ -113,6 +113,7 @@ let execute =
     Buffer.clear stderr_buff;
     Buffer.clear stdout_buff;
     JsooTop.execute true ~pp_code ~highlight_location pp_result phrase;
+    let mime_vals = Mime_printer.get () in
     Format.pp_print_flush pp_code ();
     Format.pp_print_flush pp_result ();
     IdlM.ErrM.return
@@ -123,6 +124,7 @@ let execute =
           sharp_ppf = buff_opt code_buff;
           caml_ppf = buff_opt res_buff;
           highlight = !highlighted;
+          mime_vals;
         }
 
 let sync_get url =
@@ -245,6 +247,7 @@ let setup () =
           sharp_ppf = None;
           caml_ppf = None;
           highlight = None;
+          mime_vals = [];
         }
   with e ->
     IdlM.ErrM.return_err (Toplevel_api_gen.InternalError (Printexc.to_string e))
@@ -267,9 +270,12 @@ let complete phrase =
   IdlM.ErrM.return Toplevel_api_gen.{ n; completions }
 
 let server process e =
-  let call : Rpc.call = Marshal.from_bytes e 0 in
+  log "Worker received: %s" e;
+  let (_, id, call) = Jsonrpc.version_id_and_call_of_string e in
   M.bind (process call) (fun response ->
-      Js_of_ocaml.Worker.post_message (Marshal.to_string response []));
+    let rtxt = Jsonrpc.string_of_response ~id response in
+    log "Worker sending: %s" rtxt;
+    Js_of_ocaml.Worker.post_message rtxt);
   ()
 
   let loc = function
@@ -355,6 +361,7 @@ let typecheck_phrase =
             ; sharp_ppf = None
             ; caml_ppf = buff_opt res_buff
             ; highlight = !highlighted
+            ; mime_vals = []
             }
       | _ ->
         failwith "Typechecking"
@@ -369,6 +376,7 @@ let typecheck_phrase =
           ; sharp_ppf = None
           ; caml_ppf = buff_opt res_buff
           ; highlight = !highlighted
+          ; mime_vals = []
           }
 
 let run () =

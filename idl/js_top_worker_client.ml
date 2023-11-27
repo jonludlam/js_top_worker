@@ -20,6 +20,8 @@ type rpc = Rpc.call -> Rpc.response Lwt.t
 
 exception Timeout
 
+let log s = Js_of_ocaml.Firebug.console##log (Js_of_ocaml.Js.string s)
+
 let demux context msg =
   Lwt.async (fun () ->
       match Queue.take_opt context.waiting with
@@ -27,12 +29,14 @@ let demux context msg =
       | Some (mv, outstanding_execution) ->
           Brr.G.stop_timer outstanding_execution;
           let msg : string = Message.Ev.data (Brr.Ev.as_type msg) in
-          Lwt_mvar.put mv (Ok (Marshal.from_string msg 0)))
+          log (Printf.sprintf "Client received: %s" msg);
+          Lwt_mvar.put mv (Ok (Jsonrpc.response_of_string msg)))
 
 let rpc : context -> Rpc.call -> Rpc.response Lwt.t =
  fun context call ->
   let open Lwt in
-  let jv = Marshal.to_bytes call [] in
+  let jv = Jsonrpc.string_of_call call in
+  log (Printf.sprintf "Client sending: %s" jv);
   let mv = Lwt_mvar.create_empty () in
   let outstanding_execution =
     Brr.G.set_timeout ~ms:context.timeout (fun () ->

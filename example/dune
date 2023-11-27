@@ -10,7 +10,8 @@
  (name worker)
  (modes byte)
  (modules worker)
- (libraries js_top_worker))
+ (link_flags (-linkall))
+ (libraries js_top_worker imagelib base64 tyxml uutf))
 
 (rule
  (targets worker.js)

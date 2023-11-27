@@ -6,6 +6,14 @@ open Idl
 type highlight = { line1 : int; line2 : int; col1 : int; col2 : int }
 [@@deriving rpcty]
 (** An area to be highlighted *)
+type encoding = Mime_printer.encoding = | Noencoding | Base64 [@@deriving rpcty]
+
+type mime_val = Mime_printer.t = {
+  mime_type : string;
+  encoding : encoding;
+  data : string;
+}
+[@@deriving rpcty]
 
 type exec_result = {
   stdout : string option;
@@ -13,6 +21,7 @@ type exec_result = {
   sharp_ppf : string option;
   caml_ppf : string option;
   highlight : highlight option;
+  mime_vals : mime_val list;
 }
 [@@deriving rpcty]
 (** Represents the result of executing a toplevel phrase *)

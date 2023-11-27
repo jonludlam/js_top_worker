@@ -16,7 +16,8 @@
   js_top_worker-rpc
   js_of_ocaml-toplevel
   js_of_ocaml-compiler
-  astring)
+  astring
+  mime_printer)
  (preprocess
   (per_module
    ((action
