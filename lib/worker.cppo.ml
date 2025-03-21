@@ -5,7 +5,7 @@ let optbind : 'a option -> ('a -> 'b option) -> 'b option = fun x fn -> match x 
 
 let log fmt =
   Format.kasprintf
-    (fun s -> Js_of_ocaml.(Firebug.console##log (Js.string s)))
+    (fun s -> Js_of_ocaml.(Console.console##log (Js.string s)))
     fmt
 
 (* OCamlorg toplevel in a web worker
@@ -136,7 +136,7 @@ let sync_get url =
       Js.Opt.case
         (File.CoerceTo.arrayBuffer x##.response)
         (fun () ->
-          Firebug.console##log (Js.string "Failed to receive file");
+          Console.console##log (Js.string "Failed to receive file");
           None)
         (fun b -> Some (Typed_array.String.of_arrayBuffer b))
   | _ -> None
@@ -219,7 +219,7 @@ let init (init_libs : Toplevel_api_gen.init_libs) =
       Some
         (List.map
            (fun func_name ->
-             Firebug.console##log (Js.string ("Function: " ^ func_name));
+             Console.console##log (Js.string ("Function: " ^ func_name));
              let func = Js.Unsafe.js_expr func_name in
              fun () ->
                Js.Unsafe.fun_call func [| Js.Unsafe.inject Dom_html.window |])
@@ -376,7 +376,7 @@ let run () =
   let open Js_of_ocaml in
   try
     (Js_top_worker_rpc.Idl.logfn :=
-       fun s -> Js_of_ocaml.(Firebug.console##log s));
+       fun s -> Js_of_ocaml.(Console.console##log s));
     Server.complete complete;
     Server.exec execute;
     Server.setup setup;
@@ -384,6 +384,6 @@ let run () =
     Server.typecheck typecheck_phrase;
     let rpc_fn = IdlM.server Server.implementation in
     Js_of_ocaml.Worker.set_onmessage (server rpc_fn);
-    Firebug.console##log (Js.string "All finished")
+    Console.console##log (Js.string "All finished")
   with e ->
-    Firebug.console##log (Js.string ("Exception: " ^ Printexc.to_string e))
+    Console.console##log (Js.string ("Exception: " ^ Printexc.to_string e))
