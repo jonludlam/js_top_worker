@@ -3,7 +3,7 @@ open Js_of_ocaml
 open Js_top_worker_rpc
 module W = Js_top_worker_client.W
 
-let log s = Firebug.console##log (Js.string s)
+let log s = Console.console##log (Js.string s)
 
 let initialise s callback =
   let ( let* ) = Lwt_result.bind in
