@@ -216,9 +216,9 @@ let parse_default parse str eos_is_error =
       | Syntaxerr.Ill_formed_ast (loc, s) ->
           Error ([mkloc loc],
                  Printf.sprintf "Error: broken invariant in parsetree: %s" s)
-      | Syntaxerr.Invalid_package_type (loc, s) ->
+      | Syntaxerr.Invalid_package_type (loc, _s) ->
           Error ([mkloc loc],
-                 Printf.sprintf "Invalid package type: %s" s)
+                 Printf.sprintf "Invalid package type")
 #if OCAML_VERSION >= (5, 0, 0)
       | Syntaxerr.Removed_string_set loc ->
           Error ([mkloc loc],

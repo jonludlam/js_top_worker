@@ -198,7 +198,11 @@ let init (init_libs : Toplevel_api_gen.init_libs) =
 #endif
     let old_loader = !load in
     (load :=
+#if OCAML_VERSION >= (5,2,0)
+       fun ~allow_hidden ~unit_name ->
+#else
        fun ~unit_name ->
+#endif
          let result =
             optbind
              (try Some (List.assoc (String.uncapitalize_ascii unit_name) cmi_files) with _ -> None)
@@ -211,8 +215,15 @@ let init (init_libs : Toplevel_api_gen.init_libs) =
                  filename =
                    Sys.executable_name;
                  cmi = read_cmi unit_name (Bytes.of_string x);
+#if OCAML_VERSION >= (5,2,0)
+                 visibility = Visible
+#endif
                }
+#if OCAML_VERSION >= (5,2,0)
+         | _ -> old_loader ~allow_hidden ~unit_name);
+#else
          | _ -> old_loader ~unit_name);
+#endif
     Js_of_ocaml.Worker.import_scripts
       (List.map (fun cma -> cma.Toplevel_api_gen.url) init_libs.cmas);
     functions :=

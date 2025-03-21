@@ -379,7 +379,9 @@ let visible_modules () =
               (Sys.readdir (if dir = "" then Filename.current_dir_name else dir))
           with Sys_error _ ->
             acc)
-#if OCAML_VERSION >= (4, 08, 0)
+#if OCAML_VERSION >= (5, 2, 0)
+        String_set.empty @@ Load_path.get_path_list ()
+#elif OCAML_VERSION >= (4, 08, 0)
         String_set.empty @@ Load_path.get_paths ()
 #else
         String_set.empty !Config.load_path
@@ -399,8 +401,11 @@ let add_fields_of_type decl acc =
         acc
     | Type_record (fields, _) ->
         List.fold_left (fun acc field -> add (field_name field) acc) acc fields
-    | Type_abstract ->
-        acc
+#if OCAML_VERSION >= (5, 2, 0)
+    | Type_abstract _ -> acc
+#else
+    | Type_abstract -> acc
+#endif
     | Type_open ->
         acc
 
@@ -414,7 +419,11 @@ let add_names_of_type decl acc =
         List.fold_left (fun acc cstr -> add (constructor_name cstr) acc) acc constructors
     | Type_record (fields, _) ->
         List.fold_left (fun acc field -> add (field_name field) acc) acc fields
-    | Type_abstract ->
+#if OCAML_VERSION >= (5, 2, 0)
+        | Type_abstract _ ->
+#else
+        | Type_abstract ->
+#endif
         acc
     | Type_open ->
         acc
@@ -950,7 +959,9 @@ let complete ~phrase_terminator ~input =
               (fun acc d -> add_files filter acc (Filename.concat d dir))
               String_map.empty
               (Filename.current_dir_name ::
-#if OCAML_VERSION >= (4, 08, 0)
+#if OCAML_VERSION >= (5, 2, 0)
+                (Load_path.get_path_list ())
+#elif OCAML_VERSION >= (4, 08, 0)
                 (Load_path.get_paths ())
 #else
                 !Config.load_path
@@ -985,7 +996,9 @@ let complete ~phrase_terminator ~input =
               (fun acc d -> add_files filter acc (Filename.concat d dir))
               String_map.empty
               (Filename.current_dir_name ::
-#if OCAML_VERSION >= (4, 08, 0)
+#if OCAML_VERSION >= (5, 2, 0)
+                (Load_path.get_path_list ())
+#elif OCAML_VERSION >= (4, 08, 0)
                 (Load_path.get_paths ())
 #else
                 !Config.load_path
