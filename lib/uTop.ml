@@ -191,6 +191,8 @@ let invalid_package_error_to_string err =
         Format.fprintf ppf
           "only module type identifier and %a constraints are supported"
           inline_code "with type"
+    | Misplaced_attribute ->
+        Format.fprintf ppf "misplaced attribute"
   in
   let buf = Buffer.create 128 in
   let fmt = Format.formatter_of_buffer buf in
@@ -249,6 +251,11 @@ let parse_default parse str eos_is_error =
              syntax for them.\n\
              Hint: Mutable sequences of bytes are available in the Bytes module.\n\
              Hint: Did you mean to use 'Bytes.set'?")
+      | Missing_unboxed_literal_suffix loc |Malformed_instance_identifier loc ->
+          Error ([mkloc loc],
+            "Syntax error: unboxed literals are not supported in this version of OCaml.\n\
+             Hint: Unboxed literals are available in the Unboxed module.\n\
+             Hint: Did you mean to use 'Unboxed.set'?")
 #endif
     end
     | Syntaxerr.Escape_error | Parsing.Parse_error ->
@@ -285,7 +292,12 @@ let with_loc loc str = {
      pparam_loc=loc;
      pparam_desc=Pparam_val (Nolabel, None, p);
    }] in
-   (Exp.function_ args None (Pfunction_body e))
+   let constraints = {
+     mode_annotations = [];
+     ret_mode_annotations = [];
+     ret_type_constraint = None;
+    } in
+   (Exp.function_ args constraints (Pfunction_body e))
 
 (* Check that the given phrase can be evaluated without typing/compile
    errors. *)

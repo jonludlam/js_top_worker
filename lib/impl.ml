@@ -244,9 +244,11 @@ module Make (S : S) = struct
         | None -> ())
       dcs.dcs_toplevel_modules;
 
-    let new_load ~s ~old_loader ~allow_hidden ~unit_name =
-      Logs.info (fun m -> m "%s Loading: %s" s unit_name);
-      let filename = filename_of_module unit_name in
+    let new_load : 'a 'b. string -> ('a -> string) -> (allow_hidden:bool -> unit_name:'a -> 'b option) -> allow_hidden:bool -> unit_name:'a -> 'b option
+     = fun s to_string old_loader ~allow_hidden ~unit_name ->
+      let unit_name_s = to_string unit_name in
+      Logs.info (fun m -> m "%s Loading: %s" s unit_name_s);
+      let filename = filename_of_module unit_name_s in
 
       let fs_name = Filename.(concat path filename) in
       (* Check if it's already been downloaded. This will be the
@@ -282,11 +284,11 @@ module Make (S : S) = struct
     else
       let open Persistent_env.Persistent_signature in
       let old_loader = !load in
-      load := new_load ~s:"comp" ~old_loader;
+      load := new_load "comp" Compilation_unit.Name.to_string old_loader;
 
       let open Ocaml_typing.Persistent_env.Persistent_signature in
       let old_loader = !load in
-      load := new_load ~s:"merl" ~old_loader
+      load := new_load "merl" Ocaml_typing.Compilation_unit.Name.to_string old_loader
 
   let init (init_libs : Toplevel_api_gen.init_libs) =
     try
@@ -374,61 +376,8 @@ module Make (S : S) = struct
 
   let typecheck_phrase :
       string ->
-      (Toplevel_api_gen.exec_result, Toplevel_api_gen.err) IdlM.T.resultb =
-    let res_buff = Buffer.create 100 in
-    let pp_result = Format.formatter_of_buffer res_buff in
-    let highlighted = ref None in
-    let highlight_location loc =
-      let _file1, line1, col1 = Location.get_pos_info loc.Location.loc_start in
-      let _file2, line2, col2 = Location.get_pos_info loc.Location.loc_end in
-      highlighted := Some Toplevel_api_gen.{ line1; col1; line2; col2 }
-    in
-    fun phr ->
-      Buffer.clear res_buff;
-      Buffer.clear stderr_buff;
-      Buffer.clear stdout_buff;
-      try
-        let lb = Lexing.from_function (refill_lexbuf phr (ref 0) None) in
-        let phr = !Toploop.parse_toplevel_phrase lb in
-        let phr = Toploop.preprocess_phrase pp_result phr in
-        match phr with
-        | Parsetree.Ptop_def sstr ->
-            let oldenv = !Toploop.toplevel_env in
-            Typecore.reset_delayed_checks ();
-            let str, sg, sn, _, newenv =
-              Typemod.type_toplevel_phrase oldenv sstr
-            in
-            let sg' = Typemod.Signature_names.simplify newenv sn sg in
-            ignore (Includemod.signatures ~mark:Mark_positive oldenv sg sg');
-            Typecore.force_delayed_checks ();
-            Printtyped.implementation pp_result str;
-            Format.pp_print_flush pp_result ();
-            Warnings.check_fatal ();
-            flush_all ();
-            IdlM.ErrM.return
-              Toplevel_api_gen.
-                {
-                  stdout = buff_opt stdout_buff;
-                  stderr = buff_opt stderr_buff;
-                  sharp_ppf = None;
-                  caml_ppf = buff_opt res_buff;
-                  highlight = !highlighted;
-                  mime_vals = [];
-                }
-        | _ -> failwith "Typechecking"
-      with x ->
-        (match loc x with None -> () | Some loc -> highlight_location loc);
-        Errors.report_error Format.err_formatter x;
-        IdlM.ErrM.return
-          Toplevel_api_gen.
-            {
-              stdout = buff_opt stdout_buff;
-              stderr = buff_opt stderr_buff;
-              sharp_ppf = None;
-              caml_ppf = buff_opt res_buff;
-              highlight = !highlighted;
-              mime_vals = [];
-            }
+      (Toplevel_api_gen.exec_result, Toplevel_api_gen.err) IdlM.T.resultb = fun _ ->
+        failwith "Not implemented"
 
   let split_primitives p =
     let len = String.length p in
@@ -440,8 +389,8 @@ module Make (S : S) = struct
     in
     Array.of_list (split 0 0)
 
-  let compile_js (id : string option) prog =
-    try
+  let compile_js (_id : string option) _prog =
+    (* try
       let l = Lexing.from_string prog in
       let phr = Parse.toplevel_phrase l in
       Typecore.reset_delayed_checks ();
@@ -518,7 +467,8 @@ module Make (S : S) = struct
           let js = Buffer.contents b in
           IdlM.ErrM.return js
       | _ -> IdlM.ErrM.return_err (Toplevel_api_gen.InternalError "Parse error")
-    with e -> IdlM.ErrM.return ("Exception: %s" ^ Printexc.to_string e)
+    with e -> IdlM.ErrM.return ("Exception: %s" ^ Printexc.to_string e) *)
+    failwith "Not implemented"
 
   let handle_toplevel stripped =
     if String.length stripped < 2 || stripped.[0] <> '#' || stripped.[1] <> ' '
@@ -775,7 +725,7 @@ module Make (S : S) = struct
         let lexbuf = Lexing.from_string source in
         let ast = Parse.implementation lexbuf in
         Logs.info (fun m -> m "About to type_implementation");
-        let _ = Typemod.type_implementation unit_info env  ast in
+        let _ = Typemod.type_implementation unit_info (Compilation_unit.of_string (modname_of_id id)) env ast in
         let b = Sys.file_exists (prefix ^ ".cmi") in
         Logs.info (fun m -> m "file_exists: %s = %b\n%!" (prefix ^ ".cmi") b));
       (* reset_dirs () *) ()

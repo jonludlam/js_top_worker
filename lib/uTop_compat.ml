@@ -59,7 +59,7 @@ let toploop_load_file ppf fn =
 
 (** Returns whether the given path is persistent. *)
 let rec is_persistent_path = function
-  | Path.Pident id -> Ident.persistent id
+  | Path.Pident id -> Ident.is_global_or_predef id
   | Path.Pdot (p, _) -> is_persistent_path p
   | Path.Papply (_, p) -> is_persistent_path p
 #if OCAML_VERSION >= (5, 1, 0)
@@ -92,6 +92,8 @@ let invalid_package_error_to_string err =
         Format.fprintf ppf
           "only module type identifier and %a constraints are supported"
           inline_code "with type"
+    | Misplaced_attribute ->
+        Format.fprintf ppf "misplaced attribute"
   in
   let buf = Buffer.create 128 in
   let fmt = Format.formatter_of_buffer buf in
@@ -110,7 +112,12 @@ module Exp = struct
      pparam_loc=loc;
      pparam_desc=Pparam_val (Nolabel, None, p);
    }] in
-   (Exp.function_ args None (Pfunction_body e))
+   let constraints = {
+     mode_annotations = [];
+     ret_mode_annotations = [];
+     ret_type_constraint = None;
+    } in
+   (Exp.function_ args constraints (Pfunction_body e))
 #else
   let fun_ ~loc p e = Exp.fun_ ~loc Nolabel None p e
 #endif
