@@ -13,8 +13,10 @@ let server process e =
   let _, id, call = Jsonrpc.version_id_and_call_of_string e in
   Impl.M.bind (process call) (fun response ->
       let rtxt = Jsonrpc.string_of_response ~id response in
-      Jslib.log "Worker sending: %s" rtxt;
-      Js_of_ocaml.Worker.post_message (Js_of_ocaml.Js.string rtxt);
+      let response = Js_of_ocaml.Js.string rtxt in
+      Jslib.log "Worker sending:";
+      Js_of_ocaml.Console.console##log response;
+      Js_of_ocaml.Worker.post_message response;
       Impl.M.return ())
 
 let loc = function
