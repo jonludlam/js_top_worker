@@ -14,7 +14,7 @@ let server process e =
   Impl.M.bind (process call) (fun response ->
       let rtxt = Jsonrpc.string_of_response ~id response in
       Jslib.log "Worker sending: %s" rtxt;
-      Js_of_ocaml.Worker.post_message rtxt;
+      Js_of_ocaml.Worker.post_message (Js_of_ocaml.Js.string rtxt);
       Impl.M.return ())
 
 let loc = function
@@ -94,7 +94,9 @@ let run () =
     Server.compile_js compile_js;
     Server.exec_toplevel exec_toplevel;
     let rpc_fn = Impl.IdlM.server Server.implementation in
-    Js_of_ocaml.Worker.set_onmessage (fun x -> ignore (server rpc_fn x));
+    Js_of_ocaml.Worker.set_onmessage (fun x ->
+      let s = Js_of_ocaml.Js.to_string x in
+      ignore (server rpc_fn s));
     Console.console##log (Js.string "All finished")
   with e ->
     Console.console##log (Js.string ("Exception: " ^ Printexc.to_string e))

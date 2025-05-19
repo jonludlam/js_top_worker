@@ -28,14 +28,15 @@ let demux context msg =
       | None -> Lwt.return ()
       | Some (mv, outstanding_execution) ->
           Brr.G.stop_timer outstanding_execution;
-          let msg : string = Message.Ev.data (Brr.Ev.as_type msg) in
+          let msg = Message.Ev.data (Brr.Ev.as_type msg) in
+          let msg = Js_of_ocaml.Js.to_string msg in
           (* log (Printf.sprintf "Client received: %s" msg); *)
           Lwt_mvar.put mv (Ok (Jsonrpc.response_of_string msg)))
 
 let rpc : context -> Rpc.call -> Rpc.response Lwt.t =
  fun context call ->
   let open Lwt in
-  let jv = Jsonrpc.string_of_call call in
+  let jv = Jsonrpc.string_of_call call |> Js_of_ocaml.Js.string in
   (* log (Printf.sprintf "Client sending: %s" jv); *)
   let mv = Lwt_mvar.create_empty () in
   let outstanding_execution =
