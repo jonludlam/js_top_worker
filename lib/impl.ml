@@ -753,7 +753,7 @@ module Make (S : S) = struct
 
   let query_errors id deps is_toplevel orig_source =
     try
-      Logs.info (fun m -> m "About to mangle toplevel");
+      (* Logs.info (fun m -> m "About to mangle toplevel"); *)
       let line1, src = mangle_toplevel is_toplevel orig_source deps in
       let id = Option.get id in
       let source = Merlin_kernel.Msource.make (line1 ^ src) in
@@ -762,7 +762,7 @@ module Make (S : S) = struct
       in
       let errors =
         wdispatch source query
-        |> StdLabels.List.map
+        |> StdLabels.List.filter_map
              ~f:(fun
                  (Ocaml_parsing.Location.{ kind; main = _; sub; source } as
                   error)
@@ -778,6 +778,7 @@ module Make (S : S) = struct
                    error
                  |> String.trim
                in
+               if loc.loc_start.pos_lnum = 0 then None else Some
                {
                  Toplevel_api_gen.kind;
                  loc;
@@ -788,7 +789,7 @@ module Make (S : S) = struct
       in
       if List.length errors = 0 then
         add_cmi id deps src;
-      Logs.info (fun m -> m "Got to end");
+      (* Logs.info (fun m -> m "Got to end"); *)
       IdlM.ErrM.return errors
     with e ->
       Logs.info (fun m -> m "Error: %s" (Printexc.to_string e));
