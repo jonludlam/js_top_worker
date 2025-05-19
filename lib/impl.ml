@@ -247,16 +247,16 @@ module Make (S : S) = struct
     let new_load : 'a 'b. string -> ('a -> string) -> (allow_hidden:bool -> unit_name:'a -> 'b option) -> allow_hidden:bool -> unit_name:'a -> 'b option
      = fun s to_string old_loader ~allow_hidden ~unit_name ->
       let unit_name_s = to_string unit_name in
-      Logs.info (fun m -> m "%s Loading: %s" s unit_name_s);
+      (* Logs.info (fun m -> m "%s Loading: %s" s unit_name_s); *)
       let filename = filename_of_module unit_name_s in
 
       let fs_name = Filename.(concat path filename) in
       (* Check if it's already been downloaded. This will be the
          case for all toplevel cmis. Also check whether we're supposed
          to handle this cmi *)
-      if Sys.file_exists fs_name
+      (* if Sys.file_exists fs_name
       then Logs.info (fun m -> m "Found: %s" fs_name)
-      else Logs.info (fun m -> m "No sign of %s locally" fs_name);
+      else Logs.info (fun m -> m "No sign of %s locally" fs_name); *)
       if
         (not (Sys.file_exists fs_name))
         && List.exists
