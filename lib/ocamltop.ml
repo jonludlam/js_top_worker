@@ -10,15 +10,28 @@ let refill_lexbuf s p buffer len =
     len''
 
 let parse_toplevel s =
-  Logs.warn (fun m -> m "Parsing toplevel phrases");
+  let legacy_warn =
+    let b = ref false in
+    fun () ->
+      if !b
+      then ()
+      else
+        (Logs.warn (fun m -> m "Warning: Legacy toplevel output detected");
+        b := true)
+  in
+
   let lexbuf = Lexing.from_string s in
   let rec loop pos =
     let _phr = !Toploop.parse_toplevel_phrase lexbuf in
     let new_pos = Lexing.lexeme_end lexbuf in
     let phr = String.sub s pos (new_pos - pos) in
     let (junk, (cont, is_legacy, output)) = Toplexer.entry lexbuf in
-    if is_legacy then
-      Logs.warn (fun m -> m "Warning: Legacy toplevel output detected");
+    let output =
+      if is_legacy then begin
+        legacy_warn ();
+        List.map (fun x -> try String.sub x 2 (String.length x - 2) with _ -> "") output
+      end else output
+    in
     let new_pos = Lexing.lexeme_end lexbuf in
     if cont then (phr, junk, output) :: loop new_pos else [ (phr, junk, output) ]
   in

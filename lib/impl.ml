@@ -652,6 +652,7 @@ module Make (S : S) = struct
     line1, src
 
   let complete_prefix _id _deps is_toplevel source position =
+    try begin
     let line1, src = mangle_toplevel is_toplevel source [] in
     let src= line1 ^ src in
     let source = Merlin_kernel.Msource.make src in
@@ -700,6 +701,11 @@ module Make (S : S) = struct
         IdlM.ErrM.return { Toplevel_api_gen.from; to_; entries }
     | None ->
         IdlM.ErrM.return { Toplevel_api_gen.from = 0; to_ = 0; entries = [] }
+    end
+    with e ->
+      Logs.info (fun m -> m "Error: %s" (Printexc.to_string e));
+      IdlM.ErrM.return_err
+        (Toplevel_api_gen.InternalError (Printexc.to_string e))
 
   let add_cmi id deps source =
     Logs.info (fun m -> m "add_cmi");
@@ -797,31 +803,37 @@ module Make (S : S) = struct
         (Toplevel_api_gen.InternalError (Printexc.to_string e))
 
   let type_enclosing _id deps is_toplevel orig_source position =
-    let line1, src = mangle_toplevel is_toplevel orig_source deps in
-    let src = line1 ^ src in
-    let position =
-      match position with
-      | Toplevel_api_gen.Start -> `Start
-      | Offset x -> `Offset (x + String.length line1)
-      | Logical (x, y) -> `Logical (x+1, y)
-      | End -> `End
-    in
-    let source = Merlin_kernel.Msource.make src in
-    let query = Query_protocol.Type_enclosing (None, position, None) in
-    let enclosing = wdispatch source query in
-    let map_index_or_string = function
-      | `Index i -> Toplevel_api_gen.Index i
-      | `String s -> String s
-    in
-    let map_tail_position = function
-      | `No -> Toplevel_api_gen.No
-      | `Tail_position -> Tail_position
-      | `Tail_call -> Tail_call
-    in
-    let enclosing =
-      List.map
-        (fun (x, y, z) -> (x, map_index_or_string y, map_tail_position z))
-        enclosing
-    in
-    IdlM.ErrM.return enclosing
+    try
+      let line1, src = mangle_toplevel is_toplevel orig_source deps in
+      let src = line1 ^ src in
+      let position =
+        match position with
+        | Toplevel_api_gen.Start -> `Start
+        | Offset x -> `Offset (x + String.length line1)
+        | Logical (x, y) -> `Logical (x+1, y)
+        | End -> `End
+      in
+      let source = Merlin_kernel.Msource.make src in
+      let query = Query_protocol.Type_enclosing (None, position, None) in
+      let enclosing = wdispatch source query in
+      let map_index_or_string = function
+        | `Index i -> Toplevel_api_gen.Index i
+        | `String s -> String s
+      in
+      let map_tail_position = function
+        | `No -> Toplevel_api_gen.No
+        | `Tail_position -> Tail_position
+        | `Tail_call -> Tail_call
+      in
+      let enclosing =
+        List.map
+          (fun (x, y, z) -> (x, map_index_or_string y, map_tail_position z))
+          enclosing
+      in
+      IdlM.ErrM.return enclosing
+    with e ->
+      Logs.info (fun m -> m "Error: %s" (Printexc.to_string e));
+      IdlM.ErrM.return_err
+        (Toplevel_api_gen.InternalError (Printexc.to_string e))
+
 end
