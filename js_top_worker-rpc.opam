@@ -10,6 +10,7 @@ depends: [
   "dune" {>= "2.9.1"}
   "mime_printer"
   "rresult"
+  "rpclib"
   "merlin-lib"
 ]
 build : [
