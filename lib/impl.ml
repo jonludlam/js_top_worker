@@ -507,7 +507,11 @@ module Make (S : S) = struct
       let result = { Toplevel_api_gen.script = content_txt; mime_vals; parts=[] } in
       IdlM.ErrM.return result
 
-  let exec_toplevel (phrase : string) = handle_toplevel phrase
+  let exec_toplevel (phrase : string) =
+    try handle_toplevel phrase with e -> 
+      Logs.info (fun m -> m "Error: %s" (Printexc.to_string e));
+      IdlM.ErrM.return_err
+        (Toplevel_api_gen.InternalError (Printexc.to_string e))
 
   let config () =
     let path =
