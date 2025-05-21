@@ -7,6 +7,54 @@ type captured = { stdout : string; stderr : string }
 
 let modname_of_id id = "Cell__" ^ id
 
+let is_mangled_broken orig src =
+  String.length orig <> String.length src
+  (* || 
+  Seq.exists2 (fun c c' ->
+    (c' = ' ' || c = c')) (String.to_seq orig) (String.to_seq src) *)
+
+let mangle_toplevel is_toplevel orig_source deps =
+  let src =
+    if not is_toplevel then
+      orig_source
+    else
+      if
+        String.length orig_source < 2 || orig_source.[0] <> '#' || orig_source.[1] <> ' '
+      then (Logs.err (fun m -> m "xx Warning, ignoring toplevel block without a leading '# '.\n%!"); orig_source)
+      else begin
+        try
+          let s = String.sub orig_source 2 (String.length orig_source - 2) in
+          let list = Ocamltop.parse_toplevel s in
+          let buff = Buffer.create 100 in
+          List.iter (fun (phr, junk, output) ->
+            Printf.bprintf buff "  %s%s\n" phr (String.make (String.length junk) ' ');
+            let s = List.map (fun x ->
+              Printf.sprintf "%s" (String.make (String.length x) ' ')) output
+            in
+            Buffer.add_string buff (String.concat "\n" s);
+            ()) list;
+          Buffer.contents buff
+        with e ->
+          Logs.err (fun m -> m "Error in mangle_toplevel: %s" (Printexc.to_string e));
+          let ppf = Format.err_formatter in
+          let _ = Location.report_exception ppf e in
+          orig_source
+        end
+  in
+  let line1 = List.map (fun id ->
+    Printf.sprintf "open %s" (modname_of_id id)) deps |> String.concat " " in
+  let line1 = line1 ^ ";;\n" in
+  Logs.debug (fun m -> m "Line1: %s\n%!" line1);
+  Logs.debug (fun m -> m "Source: %s\n%!" src);
+  if is_mangled_broken orig_source src
+  then (
+    Printf.printf "Warning: mangled source is broken\n%!";
+    Printf.printf "orig length: %d\n%!" (String.length orig_source);
+    Printf.printf "src length: %d\n%!" (String.length src);
+    failwith "broken"
+  );
+  line1, src
+
 module JsooTopPpx = struct
   open Js_of_ocaml_compiler.Stdlib
 
@@ -623,37 +671,6 @@ module Make (S : S) = struct
         Some (from, to_, wdispatch source query)
   end
 
-  let mangle_toplevel is_toplevel orig_source deps =
-    let src =
-      if not is_toplevel then
-        orig_source
-      else
-        if
-          String.length orig_source < 2 || orig_source.[0] <> '#' || orig_source.[1] <> ' '
-        then (Logs.err (fun m -> m "xx Warning, ignoring toplevel block without a leading '# '.\n%!"); orig_source)
-        else begin
-          try
-            let s = String.sub orig_source 2 (String.length orig_source - 2) in
-            let list = Ocamltop.parse_toplevel s in
-            let buff = Buffer.create 100 in
-            List.iter (fun (phr, junk, output) ->
-            Printf.bprintf buff "  %s%s\n" phr (String.make (String.length junk) ' ');
-            List.iter (fun x ->
-              Printf.bprintf buff "  %s\n" (String.make (String.length x) ' ')) output) list;
-            Buffer.contents buff
-          with e ->
-            Logs.err (fun m -> m "Error in mangle_toplevel: %s" (Printexc.to_string e));
-            let ppf = Format.err_formatter in
-            let _ = Location.report_exception ppf e in
-            orig_source
-          end
-    in
-    let line1 = List.map (fun id ->
-      Printf.sprintf "open %s" (modname_of_id id)) deps |> String.concat " " in
-    let line1 = line1 ^ ";;\n" in
-    Logs.debug (fun m -> m "Line1: %s\n%!" line1);
-    Logs.debug (fun m -> m "Source: %s\n%!" src);
-    line1, src
 
   let complete_prefix _id _deps is_toplevel source position =
     try begin

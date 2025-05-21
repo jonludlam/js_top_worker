@@ -29,7 +29,7 @@ let parse_toplevel s =
     let output =
       if is_legacy then begin
         legacy_warn ();
-        List.map (fun x -> try String.sub x 2 (String.length x - 2) with _ -> "") output
+        output
       end else output
     in
     let new_pos = Lexing.lexeme_end lexbuf in
