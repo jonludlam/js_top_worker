@@ -343,6 +343,8 @@ module Make (S : S) = struct
   let init (init_libs : Toplevel_api_gen.init_libs) =
     try
       Logs.info (fun m -> m "init()");
+      Language_extension.(set_universe_and_enable_all Universe.Beta);
+
       path := Some init_libs.path;
 
       findlib_v := Some (S.findlib_init init_libs.findlib_index);
