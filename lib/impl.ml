@@ -673,6 +673,10 @@ module Make (S : S) = struct
         Some (from, to_, wdispatch source query)
   end
 
+    module StringSet = Set.Make (String)
+  let failed_cells = ref StringSet.empty
+
+
 
   let complete_prefix _id _deps is_toplevel source position =
     try begin
@@ -756,11 +760,13 @@ module Make (S : S) = struct
         Logs.info (fun m -> m "About to type_implementation");
         let _ = Typemod.type_implementation unit_info (Compilation_unit.of_string (modname_of_id id)) env ast in
         let b = Sys.file_exists (prefix ^ ".cmi") in
+        failed_cells := StringSet.remove id !failed_cells;
         Logs.info (fun m -> m "file_exists: %s = %b\n%!" (prefix ^ ".cmi") b));
       (* reset_dirs () *) ()
     with
     | Env.Error e ->
       Logs.err (fun m -> m "Env.Error: %a" Env.report_error e);
+      failed_cells := StringSet.add id !failed_cells;
       ()
     | exn ->
       let s = Printexc.to_string exn in
@@ -768,6 +774,7 @@ module Make (S : S) = struct
       Logs.err (fun m -> m "Backtrace: %s" (Printexc.get_backtrace ()));
       let ppf = Format.err_formatter in
       let _ = Location.report_exception ppf exn in
+      failed_cells := StringSet.add id !failed_cells;
       ()
   
 
@@ -786,6 +793,7 @@ module Make (S : S) = struct
 
   let query_errors id deps is_toplevel orig_source =
     try
+      let deps = List.filter (fun dep -> not (StringSet.mem dep !failed_cells)) deps in
       (* Logs.info (fun m -> m "About to mangle toplevel"); *)
       let line1, src = mangle_toplevel is_toplevel orig_source deps in
       let id = Option.get id in
@@ -831,6 +839,7 @@ module Make (S : S) = struct
 
   let type_enclosing _id deps is_toplevel orig_source position =
     try
+      let deps = List.filter (fun dep -> not (StringSet.mem dep !failed_cells)) deps in
       let line1, src = mangle_toplevel is_toplevel orig_source deps in
       let src = line1 ^ src in
       let position =
