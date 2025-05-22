@@ -1,0 +1,8 @@
+(executable
+ (name unix_test)
+ (public_name unix_test)
+ (modes byte)
+ (package js_top_worker-unix)
+ (modules unix_test)
+ (link_flags (-linkall))
+ (libraries js_top_worker logs logs.fmt rpclib.core rpclib.json findlib.top))

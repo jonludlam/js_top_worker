@@ -27,14 +27,17 @@ let demux context msg =
   | None -> ()
   | Some (mv, outstanding_execution) ->
       Brr.G.stop_timer outstanding_execution;
-      let msg : string = Message.Ev.data (Brr.Ev.as_type msg) in
+      let msg = Message.Ev.data (Brr.Ev.as_type msg) in
+      (* Js_of_ocaml.Console.console##log (Js_of_ocaml.Js.string "Client received the following, to be converted to an OCaml string"); *)
+      (* Js_of_ocaml.Console.console##log msg; *)
+      let msg = Js_of_ocaml.Js.to_string msg in
       (* log (Printf.sprintf "Client received: %s" msg); *)
       mv (Ok (Jsonrpc.response_of_string msg))
 
 let rpc : context -> Rpc.call -> Rpc.response Fut.t =
  fun context call ->
   let open Fut.Syntax in
-  let jv = Jsonrpc.string_of_call call in
+  let jv = Jsonrpc.string_of_call call |> Js_of_ocaml.Js.string in
   (* log (Printf.sprintf "Client sending: %s" jv); *)
   let v, mv = Fut.create () in
   let outstanding_execution =

@@ -1,4 +1,5 @@
-(executable
+(library
  (name parse_test)
- (modes byte)
+ (inline_tests (modes byte))
+ (preprocess (pps ppx_expect))
  (libraries js_top_worker fmt))
