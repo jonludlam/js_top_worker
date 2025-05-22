@@ -1,0 +1,30 @@
+lib: [
+  "_build/install/default/lib/js_top_worker-web/META"
+  "_build/install/default/lib/js_top_worker-web/dune-package"
+  "_build/install/default/lib/js_top_worker-web/findlibish.ml"
+  "_build/install/default/lib/js_top_worker-web/js_top_worker_web.a"
+  "_build/install/default/lib/js_top_worker-web/js_top_worker_web.cma"
+  "_build/install/default/lib/js_top_worker-web/js_top_worker_web.cmi"
+  "_build/install/default/lib/js_top_worker-web/js_top_worker_web.cmt"
+  "_build/install/default/lib/js_top_worker-web/js_top_worker_web.cmx"
+  "_build/install/default/lib/js_top_worker-web/js_top_worker_web.cmxa"
+  "_build/install/default/lib/js_top_worker-web/js_top_worker_web.ml"
+  "_build/install/default/lib/js_top_worker-web/js_top_worker_web__Findlibish.cmi"
+  "_build/install/default/lib/js_top_worker-web/js_top_worker_web__Findlibish.cmt"
+  "_build/install/default/lib/js_top_worker-web/js_top_worker_web__Findlibish.cmx"
+  "_build/install/default/lib/js_top_worker-web/js_top_worker_web__Jslib.cmi"
+  "_build/install/default/lib/js_top_worker-web/js_top_worker_web__Jslib.cmt"
+  "_build/install/default/lib/js_top_worker-web/js_top_worker_web__Jslib.cmx"
+  "_build/install/default/lib/js_top_worker-web/js_top_worker_web__Worker.cmi"
+  "_build/install/default/lib/js_top_worker-web/js_top_worker_web__Worker.cmt"
+  "_build/install/default/lib/js_top_worker-web/js_top_worker_web__Worker.cmx"
+  "_build/install/default/lib/js_top_worker-web/jslib.ml"
+  "_build/install/default/lib/js_top_worker-web/opam"
+  "_build/install/default/lib/js_top_worker-web/worker.ml"
+]
+libexec: [
+  "_build/install/default/lib/js_top_worker-web/js_top_worker_web.cmxs"
+]
+doc: [
+  "_build/install/default/doc/js_top_worker-web/README.md"
+]
