@@ -1,50 +1,44 @@
 { }
 
-rule entry = parse
+(* TODO: implement strings, comments, etc, to ignore ';;' in them *)
+rule fallback_expression = shortest
+    | (_ as expr)* ";;" {
+        expr
+    }
+    | (_ as expr)* eof {
+        expr
+    }
+
+and entry = parse
     | ((_ # '\n')* as junk) "\n" {
         (junk, line_prefix [] lexbuf)
     }
-    | ((_ # '\n')* as junk) {
-        (junk, (false, false, []))
+    | ((_ # '\n')* as junk) eof {
+        (junk, (false, []))
     }
-    | ((_ # '\n')* as junk) eof { (junk, (false, false, [])) }
 
 and line_prefix acc = parse
-    | "  " {
-        line acc lexbuf
-    }
     | "# " {
-        true, false, List.rev acc
+        true, List.rev acc
     }
     | _ as c {
         output_line_legacy c acc lexbuf
     }
     | eof {
-        false, false, List.rev acc
-    }
-
-and line acc = parse
-    | ((_ # '\n')* as line) "\n" {
-        line_prefix (("  "^line) :: acc) lexbuf
-    }
-    | ((_ # '\n')* as line) eof {
-        false, false, List.rev (("  "^line) :: acc)
+        false, List.rev ("" :: acc)
     }
 
 and output_line_legacy c acc = parse
     | ((_ # '\n')* as line) "\n# " {
-        true, true, List.rev ((String.make 1 c ^ line) :: acc)
+        true, List.rev ((String.make 1 c ^ line) :: acc)
     }
     | ((_ # '\n')* as line) "\n" (_ as c') {
         output_line_legacy c' ((String.make 1 c ^ line) :: acc) lexbuf
     }
     | ((_ # '\n')* as line) "\n" eof {
-        false, true, List.rev ("" :: (String.make 1 c ^ line) :: acc) 
+        false, List.rev ("" :: (String.make 1 c ^ line) :: acc) 
     }
     | (_ # '\n')* as line eof {
-        false, true, List.rev ((String.make 1 c ^ line) :: acc)
-    }
-    | eof {
-        false, true, List.rev ((String.make 1 c) :: acc)
+        false, List.rev ((String.make 1 c ^ line) :: acc)
     }
 

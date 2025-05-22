@@ -18,23 +18,27 @@ let check phrase =
 
 let%expect_test _ =
   check "# foo;; junk\n  bar\n# baz;;\n  moo\n# unterminated;; foo\n";
-  [%expect.unreachable]
-[@@expect.uncaught_exn {|
-  (* CR expect_test_collector: This test expectation appears to contain a backtrace.
-     This is strongly discouraged as backtraces are fragile.
-     Please change this test to not include a backtrace. *)
+  [%expect{|
+    input:
+    # foo;; junk
+      bar
+    # baz;;
+      moo
+    # unterminated;; foo
 
-  (Failure broken)
-  Called from unknown location
-  Called from unknown location
-  Called from unknown location
-  Called from unknown location
+    output:
+      foo;;
 
-  Trailing output
-  ---------------
-  Warning: mangled source is broken
-  orig length: 54
-  src length: 52 |}]
+      baz;;
+
+      unterminated;;
+
+    output mapped:
+    ..foo;;.....
+    .....
+    ..baz;;
+    .....
+    ..unterminated;;.... |}]
 
 let%expect_test _ =
   check "# 1+2;;\n- 3 : int\n  \n";
@@ -56,23 +60,13 @@ let%expect_test _ =
   
 let%expect_test _ =
   check "# 1+2;;";
-  [%expect.unreachable]
-[@@expect.uncaught_exn {|
-  (* CR expect_test_collector: This test expectation appears to contain a backtrace.
-     This is strongly discouraged as backtraces are fragile.
-     Please change this test to not include a backtrace. *)
-
-  (Failure broken)
-  Called from unknown location
-  Called from unknown location
-  Called from unknown location
-  Called from unknown location
-
-  Trailing output
-  ---------------
-  Warning: mangled source is broken
-  orig length: 7
-  src length: 8 |}]
+  [%expect{|
+    input:
+    # 1+2;;
+    output:
+      1+2;;
+    output mapped:
+    ..1+2;; |}]
 
 let%expect_test _ =
   check "# 1+2;;\nx\n";
@@ -88,3 +82,18 @@ let%expect_test _ =
     output mapped:
     ..1+2;;
     . |}]
+
+let%expect_test _ =
+  check "# let ;;\n  foo";
+  [%expect "
+    fallback parser
+    Got phrase
+    input:
+    # let ;;
+      foo
+    output:
+      let ;;
+
+    output mapped:
+    ..let.;;
+    ....."]

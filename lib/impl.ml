@@ -9,9 +9,9 @@ let modname_of_id id = "Cell__" ^ id
 
 let is_mangled_broken orig src =
   String.length orig <> String.length src
-  (* || 
-  Seq.exists2 (fun c c' ->
-    (c' = ' ' || c = c')) (String.to_seq orig) (String.to_seq src) *)
+  || 
+    Seq.exists2 (fun c c' ->
+      c <> c' && c' <> ' ') (String.to_seq orig) (String.to_seq src)
 
 let mangle_toplevel is_toplevel orig_source deps =
   let src =
@@ -24,16 +24,19 @@ let mangle_toplevel is_toplevel orig_source deps =
       else begin
         try
           let s = String.sub orig_source 2 (String.length orig_source - 2) in
-          let list = Ocamltop.parse_toplevel s in
-          let buff = Buffer.create 100 in
-          List.iter (fun (phr, junk, output) ->
-            Printf.bprintf buff "  %s%s\n" phr (String.make (String.length junk) ' ');
-            let s = List.map (fun x ->
-              Printf.sprintf "%s" (String.make (String.length x) ' ')) output
-            in
-            Buffer.add_string buff (String.concat "\n" s);
-            ()) list;
-          Buffer.contents buff
+          let list =
+            try Ocamltop.parse_toplevel s with _ -> Ocamltop.fallback_parse_toplevel s in
+          let lines =List.map (fun (phr, junk, output) ->
+            let l1 = Printf.sprintf "  %s%s" phr (String.make (String.length junk) ' ') in
+            match output with
+            | [] -> l1
+            | _ ->
+              let s = List.map (fun x ->
+                String.make (String.length x) ' ') output
+              in
+              (String.concat "\n" (l1 :: s));
+            ) list in
+          String.concat "\n" lines
         with e ->
           Logs.err (fun m -> m "Error in mangle_toplevel: %s" (Printexc.to_string e));
           let ppf = Format.err_formatter in
@@ -51,7 +54,6 @@ let mangle_toplevel is_toplevel orig_source deps =
     Printf.printf "Warning: mangled source is broken\n%!";
     Printf.printf "orig length: %d\n%!" (String.length orig_source);
     Printf.printf "src length: %d\n%!" (String.length src);
-    failwith "broken"
   );
   line1, src
 
