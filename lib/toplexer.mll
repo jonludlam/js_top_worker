@@ -21,6 +21,9 @@ and line_prefix acc = parse
     | "# " {
         true, List.rev acc
     }
+    | '\n' {
+        line_prefix (""::acc) lexbuf
+    }
     | _ as c {
         output_line_legacy c acc lexbuf
     }
@@ -29,14 +32,8 @@ and line_prefix acc = parse
     }
 
 and output_line_legacy c acc = parse
-    | ((_ # '\n')* as line) "\n# " {
-        true, List.rev ((String.make 1 c ^ line) :: acc)
-    }
-    | ((_ # '\n')* as line) "\n" (_ as c') {
-        output_line_legacy c' ((String.make 1 c ^ line) :: acc) lexbuf
-    }
-    | ((_ # '\n')* as line) "\n" eof {
-        false, List.rev ("" :: (String.make 1 c ^ line) :: acc) 
+    | ((_ # '\n')* as line) "\n" {
+        line_prefix ((String.make 1 c ^ line) :: acc) lexbuf
     }
     | (_ # '\n')* as line eof {
         false, List.rev ((String.make 1 c ^ line) :: acc)
