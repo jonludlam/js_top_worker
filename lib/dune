@@ -2,7 +2,7 @@
 
 (library
  (public_name js_top_worker)
- (modules uTop_complete uTop_compat uTop_lexer uTop_token uTop toplexer ocamltop impl)
+ (modules toplexer ocamltop impl)
  (libraries
   logs
   js_top_worker-rpc
@@ -48,4 +48,3 @@
   fpath
   rpclib.json))
 
-(ocamllex uTop_lexer)
