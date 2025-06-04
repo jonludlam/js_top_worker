@@ -1,0 +1,22 @@
+(executable
+ (name node_test)
+ (modes byte)
+ (modules node_test)
+ (link_flags (-linkall))
+ (libraries js_of_ocaml js_of_ocaml-toplevel js_top_worker logs logs.fmt rpclib.core rpclib.json findlib.top))
+
+(rule
+ (targets node_test.js)
+ (action
+  (run
+   %{bin:js_of_ocaml}
+   --toplevel
+   ; --pretty
+   --no-cmis
+   --effects=cps
+   +toplevel.js
+   +dynlink.js
+   +bigstringaf/runtime.js
+   %{dep:node_test.bc}
+   -o
+   %{targets})))
