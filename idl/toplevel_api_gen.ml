@@ -1969,146 +1969,113 @@ include
     and _ = typ_of_cma
     and _ = cma
   end[@@ocaml.doc "@inline"][@@merlin.hide ]
-type init_libs =
+type init_config =
   {
-  path: string ;
-  cmis: cmis ;
-  cmas: cma list ;
-  findlib_index: string ;
-  findlib_requires: string list ;
-  stdlib_dcs: string }[@@deriving rpcty]
+  findlib_index: string [@ocaml.doc " URL to the findlib index file "];
+  findlib_requires: string list [@ocaml.doc " Findlib packages to require "];
+  stdlib_dcs: string
+    [@ocaml.doc " URL to the dynamic cmis for the OCaml standard library "];
+  execute: bool
+    [@ocaml.doc " Whether this session should support execution or not. "]}
+[@@deriving rpcty]
 include
   struct
-    let _ = fun (_ : init_libs) -> ()
-    let rec init_libs_path : (_, init_libs) Rpc.Types.field =
-      {
-        Rpc.Types.fname = "path";
-        Rpc.Types.field = (let open Rpc.Types in Basic String);
-        Rpc.Types.fdefault = None;
-        Rpc.Types.fdescription = [];
-        Rpc.Types.fversion = None;
-        Rpc.Types.fget = (fun _r -> _r.path);
-        Rpc.Types.fset = (fun v _s -> { _s with path = v })
-      }
-    and init_libs_cmis : (_, init_libs) Rpc.Types.field =
-      {
-        Rpc.Types.fname = "cmis";
-        Rpc.Types.field = typ_of_cmis;
-        Rpc.Types.fdefault = None;
-        Rpc.Types.fdescription = [];
-        Rpc.Types.fversion = None;
-        Rpc.Types.fget = (fun _r -> _r.cmis);
-        Rpc.Types.fset = (fun v _s -> { _s with cmis = v })
-      }
-    and init_libs_cmas : (_, init_libs) Rpc.Types.field =
-      {
-        Rpc.Types.fname = "cmas";
-        Rpc.Types.field = (Rpc.Types.List typ_of_cma);
-        Rpc.Types.fdefault = None;
-        Rpc.Types.fdescription = [];
-        Rpc.Types.fversion = None;
-        Rpc.Types.fget = (fun _r -> _r.cmas);
-        Rpc.Types.fset = (fun v _s -> { _s with cmas = v })
-      }
-    and init_libs_findlib_index : (_, init_libs) Rpc.Types.field =
+    let _ = fun (_ : init_config) -> ()
+    let rec init_config_findlib_index : (_, init_config) Rpc.Types.field =
       {
         Rpc.Types.fname = "findlib_index";
         Rpc.Types.field = (let open Rpc.Types in Basic String);
         Rpc.Types.fdefault = None;
-        Rpc.Types.fdescription = [];
+        Rpc.Types.fdescription = ["URL to the findlib index file"];
         Rpc.Types.fversion = None;
         Rpc.Types.fget = (fun _r -> _r.findlib_index);
         Rpc.Types.fset = (fun v _s -> { _s with findlib_index = v })
       }
-    and init_libs_findlib_requires : (_, init_libs) Rpc.Types.field =
+    and init_config_findlib_requires : (_, init_config) Rpc.Types.field =
       {
         Rpc.Types.fname = "findlib_requires";
         Rpc.Types.field =
           (Rpc.Types.List (let open Rpc.Types in Basic String));
         Rpc.Types.fdefault = None;
-        Rpc.Types.fdescription = [];
+        Rpc.Types.fdescription = ["Findlib packages to require"];
         Rpc.Types.fversion = None;
         Rpc.Types.fget = (fun _r -> _r.findlib_requires);
         Rpc.Types.fset = (fun v _s -> { _s with findlib_requires = v })
       }
-    and init_libs_stdlib_dcs : (_, init_libs) Rpc.Types.field =
+    and init_config_stdlib_dcs : (_, init_config) Rpc.Types.field =
       {
         Rpc.Types.fname = "stdlib_dcs";
         Rpc.Types.field = (let open Rpc.Types in Basic String);
         Rpc.Types.fdefault = None;
-        Rpc.Types.fdescription = [];
+        Rpc.Types.fdescription =
+          ["URL to the dynamic cmis for the OCaml standard library"];
         Rpc.Types.fversion = None;
         Rpc.Types.fget = (fun _r -> _r.stdlib_dcs);
         Rpc.Types.fset = (fun v _s -> { _s with stdlib_dcs = v })
       }
-    and typ_of_init_libs =
+    and init_config_execute : (_, init_config) Rpc.Types.field =
+      {
+        Rpc.Types.fname = "execute";
+        Rpc.Types.field = (let open Rpc.Types in Basic Bool);
+        Rpc.Types.fdefault = None;
+        Rpc.Types.fdescription =
+          ["Whether this session should support execution or not."];
+        Rpc.Types.fversion = None;
+        Rpc.Types.fget = (fun _r -> _r.execute);
+        Rpc.Types.fset = (fun v _s -> { _s with execute = v })
+      }
+    and typ_of_init_config =
       Rpc.Types.Struct
         ({
            Rpc.Types.fields =
-             [Rpc.Types.BoxedField init_libs_path;
-             Rpc.Types.BoxedField init_libs_cmis;
-             Rpc.Types.BoxedField init_libs_cmas;
-             Rpc.Types.BoxedField init_libs_findlib_index;
-             Rpc.Types.BoxedField init_libs_findlib_requires;
-             Rpc.Types.BoxedField init_libs_stdlib_dcs];
-           Rpc.Types.sname = "init_libs";
+             [Rpc.Types.BoxedField init_config_findlib_index;
+             Rpc.Types.BoxedField init_config_findlib_requires;
+             Rpc.Types.BoxedField init_config_stdlib_dcs;
+             Rpc.Types.BoxedField init_config_execute];
+           Rpc.Types.sname = "init_config";
            Rpc.Types.version = None;
            Rpc.Types.constructor =
              (fun getter ->
                 let open Rresult.R in
-                  (getter.Rpc.Types.field_get "stdlib_dcs"
-                     (let open Rpc.Types in Basic String))
+                  (getter.Rpc.Types.field_get "execute"
+                     (let open Rpc.Types in Basic Bool))
                     >>=
-                    (fun init_libs_stdlib_dcs ->
-                       (getter.Rpc.Types.field_get "findlib_requires"
-                          (Rpc.Types.List
-                             (let open Rpc.Types in Basic String)))
+                    (fun init_config_execute ->
+                       (getter.Rpc.Types.field_get "stdlib_dcs"
+                          (let open Rpc.Types in Basic String))
                          >>=
-                         (fun init_libs_findlib_requires ->
-                            (getter.Rpc.Types.field_get "findlib_index"
-                               (let open Rpc.Types in Basic String))
+                         (fun init_config_stdlib_dcs ->
+                            (getter.Rpc.Types.field_get "findlib_requires"
+                               (Rpc.Types.List
+                                  (let open Rpc.Types in Basic String)))
                               >>=
-                              (fun init_libs_findlib_index ->
-                                 (getter.Rpc.Types.field_get "cmas"
-                                    (Rpc.Types.List typ_of_cma))
+                              (fun init_config_findlib_requires ->
+                                 (getter.Rpc.Types.field_get "findlib_index"
+                                    (let open Rpc.Types in Basic String))
                                    >>=
-                                   (fun init_libs_cmas ->
-                                      (getter.Rpc.Types.field_get "cmis"
-                                         typ_of_cmis)
-                                        >>=
-                                        (fun init_libs_cmis ->
-                                           (getter.Rpc.Types.field_get "path"
-                                              (let open Rpc.Types in
-                                                 Basic String))
-                                             >>=
-                                             (fun init_libs_path ->
-                                                return
-                                                  {
-                                                    path = init_libs_path;
-                                                    cmis = init_libs_cmis;
-                                                    cmas = init_libs_cmas;
-                                                    findlib_index =
-                                                      init_libs_findlib_index;
-                                                    findlib_requires =
-                                                      init_libs_findlib_requires;
-                                                    stdlib_dcs =
-                                                      init_libs_stdlib_dcs
-                                                  })))))))
-         } : init_libs Rpc.Types.structure)
-    and init_libs =
+                                   (fun init_config_findlib_index ->
+                                      return
+                                        {
+                                          findlib_index =
+                                            init_config_findlib_index;
+                                          findlib_requires =
+                                            init_config_findlib_requires;
+                                          stdlib_dcs = init_config_stdlib_dcs;
+                                          execute = init_config_execute
+                                        })))))
+         } : init_config Rpc.Types.structure)
+    and init_config =
       {
-        Rpc.Types.name = "init_libs";
+        Rpc.Types.name = "init_config";
         Rpc.Types.description = [];
-        Rpc.Types.ty = typ_of_init_libs
+        Rpc.Types.ty = typ_of_init_config
       }
-    let _ = init_libs_path
-    and _ = init_libs_cmis
-    and _ = init_libs_cmas
-    and _ = init_libs_findlib_index
-    and _ = init_libs_findlib_requires
-    and _ = init_libs_stdlib_dcs
-    and _ = typ_of_init_libs
-    and _ = init_libs
+    let _ = init_config_findlib_index
+    and _ = init_config_findlib_requires
+    and _ = init_config_stdlib_dcs
+    and _ = init_config_execute
+    and _ = typ_of_init_config
+    and _ = init_config
   end[@@ocaml.doc "@inline"][@@merlin.hide ]
 type err =
   | InternalError of string [@@deriving rpcty]
@@ -2227,10 +2194,7 @@ module Make(R:RPC) =
     let exec_toplevel_result_p = Param.mk exec_toplevel_result
     let init_libs =
       Param.mk ~name:"init_libs"
-        ~description:["Libraries to load during the initialisation of the toplevel. ";
-                     "If the stdlib cmis have not been compiled into the worker this ";
-                     "MUST include the urls from which they may be fetched"]
-        init_libs
+        ~description:["Configuration for the toplevel."] init_config
     let init =
       declare "init"
         ["Initialise the toplevel. This must be called before any other API."]

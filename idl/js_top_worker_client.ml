@@ -66,13 +66,13 @@ module Rpc_lwt = Idl.Make (Lwt)
 module Wraw = Toplevel_api_gen.Make (Rpc_lwt.GenClient ())
 
 module W : sig
-  type init_libs = Toplevel_api_gen.init_libs
+  type init_config = Toplevel_api_gen.init_config
   type err = Toplevel_api_gen.err
   type exec_result = Toplevel_api_gen.exec_result
 
   val init :
     rpc ->
-    Toplevel_api_gen.init_libs ->
+    Toplevel_api_gen.init_config ->
     (unit, Toplevel_api_gen.err) result Lwt.t
 
   val setup :
@@ -103,7 +103,7 @@ module W : sig
     string ->
     (string, Toplevel_api_gen.err) result Lwt.t
 end = struct
-  type init_libs = Toplevel_api_gen.init_libs
+  type init_config = Toplevel_api_gen.init_config
   type err = Toplevel_api_gen.err
   type exec_result = Toplevel_api_gen.exec_result
 

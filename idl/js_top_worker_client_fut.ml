@@ -71,7 +71,7 @@ module Rpc_fut = Idl.Make (M)
 module Wraw = Toplevel_api_gen.Make (Rpc_fut.GenClient ())
 
 module W = struct
-  type init_libs = Toplevel_api_gen.init_libs
+  type init_config = Toplevel_api_gen.init_config
   type err = Toplevel_api_gen.err
   type exec_result = Toplevel_api_gen.exec_result
 

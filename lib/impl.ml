@@ -96,7 +96,7 @@ module type S = sig
   val init_function : string -> unit -> unit
   val get_stdlib_dcs : string -> Toplevel_api_gen.dynamic_cmis list
   val findlib_init : string -> findlib_t
-  val require : findlib_t -> string list -> Toplevel_api_gen.dynamic_cmis list
+  val require : bool -> findlib_t -> string list -> Toplevel_api_gen.dynamic_cmis list
 end
 
 module Make (S : S) = struct
@@ -104,6 +104,7 @@ module Make (S : S) = struct
   let requires : string list ref = ref []
   let path : string option ref = ref None
   let findlib_v : S.findlib_t option ref = ref None
+  let execution_allowed = ref true
 
   let refill_lexbuf s p ppf buffer len =
     if !p = String.length s then 0
@@ -340,12 +341,12 @@ module Make (S : S) = struct
       let old_loader = !load in
       load := new_load "merl" Ocaml_typing.Compilation_unit.Name.to_string old_loader
 
-  let init (init_libs : Toplevel_api_gen.init_libs) =
+  let init (init_libs : Toplevel_api_gen.init_config) =
     try
       Logs.info (fun m -> m "init()");
       Language_extension.(set_universe_and_enable_all Universe.Beta);
 
-      path := Some init_libs.path;
+      path := Some "/static/cmis";
 
       findlib_v := Some (S.findlib_init init_libs.findlib_index);
 
@@ -353,28 +354,8 @@ module Make (S : S) = struct
       | [ dcs ] -> add_dynamic_cmis dcs
       | _ -> ());
       Clflags.no_check_prims := true;
-      List.iter
-        (fun { Toplevel_api_gen.sc_name; sc_content } ->
-          let filename =
-            Printf.sprintf "%s.cmi" (String.uncapitalize_ascii sc_name)
-          in
-          let name = Filename.(concat init_libs.path filename) in
-          S.create_file ~name ~content:sc_content)
-        init_libs.cmis.static_cmis;
-      List.iter add_dynamic_cmis init_libs.cmis.dynamic_cmis;
-
-      S.import_scripts
-        (List.map (fun cma -> cma.Toplevel_api_gen.url) init_libs.cmas);
 
       requires := init_libs.findlib_requires;
-      functions :=
-        Some
-          (List.map
-             (fun func_name ->
-               Logs.info (fun m -> m "Function: %s" func_name);
-               S.init_function func_name)
-             (List.map (fun cma -> cma.Toplevel_api_gen.fn) init_libs.cmas));
-      (* *)
       functions := Some [];
       Logs.info (fun m -> m "init() finished");
 
@@ -404,7 +385,7 @@ module Make (S : S) = struct
       in
 
       let dcs =
-        match !findlib_v with Some v -> S.require v !requires | None -> []
+        match !findlib_v with Some v -> S.require (not !execution_allowed) v !requires | None -> []
       in
       List.iter add_dynamic_cmis dcs;
 

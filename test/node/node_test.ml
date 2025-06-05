@@ -44,7 +44,7 @@ module S : Impl.S = struct
   let findlib_init _ = ()
   let get_stdlib_dcs _uri = []
 
-  let require () packages =
+  let require _ () packages =
     try
       let eff_packages =
         Findlib.package_deep_ancestors !Topfind.predicates packages
@@ -96,32 +96,13 @@ let _ =
   let rpc = start_server () in
   Printf.printf "Starting worker...\n%!";
   let ( let* ) = IdlM.ErrM.bind in
-  let dcs =
-    Js_top_worker_rpc.Toplevel_api_gen.
-      {
-        dcs_url = "cmis/";
-        dcs_toplevel_modules =
-          [
-            "CamlinternalOO";
-            "Stdlib";
-            "CamlinternalFormat";
-            "Std_exit";
-            "CamlinternalMod";
-            "CamlinternalFormatBasics";
-            "CamlinternalLazy";
-          ];
-        dcs_file_prefixes = [ "stdlib__" ];
-      }
-  in
   let init =
     Js_top_worker_rpc.Toplevel_api_gen.
       {
-        path = "/tmp/static/cmis";
-        cmas = [];
-        cmis = { dynamic_cmis = [ dcs ]; static_cmis = [] };
         stdlib_dcs = "/lib/ocaml/dynamic_cmis.json";
         findlib_index = "/lib/findlib_index";
         findlib_requires = [];
+        execute = true;
       }
   in
   let x =

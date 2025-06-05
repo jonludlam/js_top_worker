@@ -117,7 +117,7 @@ module S : Impl.S = struct
   let findlib_init _ = ()
   let get_stdlib_dcs _uri = []
 
-  let require () packages =
+  let require _ () packages =
     try
       let eff_packages =
         Findlib.package_deep_ancestors !Topfind.predicates packages

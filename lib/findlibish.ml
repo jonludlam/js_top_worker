@@ -150,7 +150,7 @@ let init findlib_index : t =
           None)
     metas |> flatten_libs
 
-let require v packages =
+let require cmi_only v packages =
   let rec require dcss package :
       Js_top_worker_rpc.Toplevel_api_gen.dynamic_cmis list =
     match List.find (fun lib -> lib.name = package) v with
@@ -179,7 +179,7 @@ let require v packages =
                     let archive_js =
                       Fpath.(dir / (archive ^ ".cma.js") |> to_string)
                     in
-                    if List.mem lib.name preloaded then ()
+                    if List.mem lib.name preloaded || cmi_only then ()
                     else
                       Js_of_ocaml.Worker.import_scripts
                         [ Uri.with_path uri archive_js |> Uri.to_string ];

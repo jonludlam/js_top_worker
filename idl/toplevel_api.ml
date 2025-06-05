@@ -183,7 +183,12 @@ type cma = {
 }
 [@@deriving rpcty]
 
-type init_libs = { path : string; cmis : cmis; cmas : cma list; findlib_index : string; findlib_requires : string list; stdlib_dcs : string } [@@deriving rpcty]
+type init_config = {
+  findlib_index : string; (** URL to the findlib index file *)
+  findlib_requires : string list; (** Findlib packages to require *)
+  stdlib_dcs : string; (** URL to the dynamic cmis for the OCaml standard library *)
+  execute : bool (** Whether this session should support execution or not. *)
+} [@@deriving rpcty]
 type err = InternalError of string [@@deriving rpcty]
 
 type opt_id = string option [@@deriving rpcty]
@@ -241,11 +246,9 @@ module Make (R : RPC) = struct
     Param.mk ~name:"init_libs"
       ~description:
         [
-          "Libraries to load during the initialisation of the toplevel. ";
-          "If the stdlib cmis have not been compiled into the worker this ";
-          "MUST include the urls from which they may be fetched";
+          "Configuration for the toplevel.";
         ]
-      init_libs
+      init_config
 
   let init =
     declare "init"

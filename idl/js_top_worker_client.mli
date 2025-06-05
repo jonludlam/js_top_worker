@@ -24,7 +24,7 @@ module W : sig
 
       The following types are redeclared here for convenience. *)
 
-  type init_libs = Toplevel_api_gen.init_libs
+  type init_config = Toplevel_api_gen.init_config
   type err = Toplevel_api_gen.err
   type exec_result = Toplevel_api_gen.exec_result
 
@@ -35,7 +35,7 @@ module W : sig
       worker by the timeout set in the {!val-start} call, the {!Lwt} thread will
       be {{!Lwt.fail}failed}. *)
 
-  val init : rpc -> init_libs -> (unit, err) result Lwt.t
+  val init : rpc -> init_config -> (unit, err) result Lwt.t
   (** Initialise the toplevel. This must be called before any other API. *)
 
   val setup : rpc -> unit -> (exec_result, err) result Lwt.t

@@ -3,23 +3,6 @@ open Js_of_ocaml
 open Js_top_worker_rpc
 module W = Js_top_worker_client.W
 
-let dcs =
-  Js_top_worker_rpc.Toplevel_api_gen.
-    {
-      dcs_url = "cmis/";
-      dcs_toplevel_modules =
-        [
-          "CamlinternalOO";
-          "Stdlib";
-          "CamlinternalFormat";
-          "Std_exit";
-          "CamlinternalMod";
-          "CamlinternalFormatBasics";
-          "CamlinternalLazy";
-        ];
-      dcs_file_prefixes = [ "stdlib__" ];
-    }
-
 let log s = Console.console##log (Js.string s)
 
 let initialise s callback =
@@ -29,12 +12,10 @@ let initialise s callback =
     W.init rpc
       Toplevel_api_gen.
         {
-          path = "/static/cmis";
-          cmas = [];
-          cmis = { dynamic_cmis = [ dcs ]; static_cmis = [] };
           stdlib_dcs = "/lib/ocaml/dynamic_cmis.json";
           findlib_index = "/lib/findlib_index";
           findlib_requires = [];
+          execute = true;
         }
   in
   Lwt.return (Ok rpc)

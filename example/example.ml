@@ -12,12 +12,10 @@ let initialise s callback =
     W.init rpc
       Toplevel_api_gen.
         {
-          path = "/static/cmis";
-          cmas = [];
-          cmis = { dynamic_cmis = []; static_cmis = [] };
           stdlib_dcs = "/lib/ocaml/dynamic_cmis.json";
           findlib_index = "/lib/findlib_index";
           findlib_requires = [ "astring" ];
+          execute = true;
         }
   in
   Lwt.return (Ok rpc)
