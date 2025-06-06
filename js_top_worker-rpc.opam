@@ -21,3 +21,6 @@ synopsis: "JS Toplevel worker - RPC functions"
 description: """
 An OCaml toplevel designed to run as a web worker
 """
+pin-depends: [
+  [ "mime_printer.dev" "git+https://github.com/jonludlam/mime_printer.git#odoc_notebook" ]
+]

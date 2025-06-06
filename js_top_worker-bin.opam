@@ -10,7 +10,7 @@ depends: [
   "eio_main"
   "bos"
   "opam-format"
-  "findlib"
+  "ocamlfind"
   "logs"
   "fmt"
   "ocaml"
