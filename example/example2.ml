@@ -3,7 +3,6 @@ open Js_of_ocaml
 open Js_top_worker_rpc
 module W = Js_top_worker_client.W
 
-
 let log s = Console.console##log (Js.string s)
 
 let initialise s callback =
@@ -12,12 +11,7 @@ let initialise s callback =
   let* () =
     W.init rpc
       Toplevel_api_gen.
-        {
-          stdlib_dcs = "/lib/ocaml/dynamic_cmis.json";
-          findlib_index = "/lib/findlib_index";
-          findlib_requires = [];
-          execute = true;
-        }
+        { stdlib_dcs = None; findlib_requires = []; execute = true }
   in
   Lwt.return (Ok rpc)
 
@@ -41,7 +35,7 @@ let log_output (o : Toplevel_api_gen.exec_result) =
 
 let _ =
   let ( let* ) = Lwt_result.bind in
-  let* rpc = initialise "worker_nocmis.js" (fun _ -> log "Timeout") in
+  let* rpc = initialise "_opam/worker.js" (fun _ -> log "Timeout") in
   let* o = W.setup rpc () in
   log_output o;
   let* o = W.exec rpc "2*2;;" in

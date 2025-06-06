@@ -18,9 +18,9 @@
   merlin-lib.query_commands
   merlin-lib.ocaml_parsing
   findlib
-  findlib.top
-  )
- (js_of_ocaml (javascript_files stubs.js))
+  findlib.top)
+ (js_of_ocaml
+  (javascript_files stubs.js))
  (preprocess
   (per_module
    ((action
@@ -47,4 +47,3 @@
   findlib
   fpath
   rpclib.json))
-

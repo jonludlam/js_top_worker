@@ -1,10 +1,25 @@
 node_test.js: [INFO] init()
-node_test.js: [INFO] sync_get: ./lib/findlib_index
-node_test.js: [ERROR] Error reading file ./lib/findlib_index: Sys_error("Error: ENOENT: no such file or directory, open '/Users/jon/devel/learno/codemirror3/js_top_worker/_build/default/test/node/lib/findlib_index'")
-node_test.js: [INFO] sync_get: ./lib/ocaml/dynamic_cmis.json
-node_test.js: [ERROR] Error reading file ./lib/ocaml/dynamic_cmis.json: Sys_error("Error: ENOENT: no such file or directory, open '/Users/jon/devel/learno/codemirror3/js_top_worker/_build/default/test/node/lib/ocaml/dynamic_cmis.json'")
+node_test.js: [INFO] sync_get: _opam/findlib_index
+node_test.js: [INFO] sync_get: _opam/lib/ocaml/stdlib/META
+node_test.js: [INFO] sync_get: _opam/lib/astring/META
+Parsed uri: lib/ocaml/stdlib/META
+Parsed uri: lib/astring/META
+node_test.js: [INFO] sync_get: _opam/lib/ocaml/dynamic_cmis.json
+node_test.js: [INFO] sync_get: _opam/lib/ocaml/camlinternalOO.cmi
+node_test.js: [INFO] sync_get: _opam/lib/ocaml/stdlib.cmi
+node_test.js: [INFO] sync_get: _opam/lib/ocaml/camlinternalFormat.cmi
+node_test.js: [INFO] sync_get: _opam/lib/ocaml/std_exit.cmi
+node_test.js: [INFO] sync_get: _opam/lib/ocaml/camlinternalMod.cmi
+node_test.js: [INFO] sync_get: _opam/lib/ocaml/camlinternalFormatBasics.cmi
+node_test.js: [INFO] sync_get: _opam/lib/ocaml/camlinternalLazy.cmi
 node_test.js: [INFO] init() finished
 node_test.js: [INFO] setup() ...
+node_test.js: [INFO] Fetching stdlib__Format.cmi
+
+node_test.js: [INFO] sync_get: _opam/lib/ocaml/stdlib__Format.cmi
+node_test.js: [INFO] Fetching stdlib__Sys.cmi
+
+node_test.js: [INFO] sync_get: _opam/lib/ocaml/stdlib__Sys.cmi
 error while evaluating #enable "pretty";;
 error while evaluating #disable "shortvar";;
 node_test.js: [INFO] Setup complete

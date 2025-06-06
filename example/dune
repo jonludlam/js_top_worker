@@ -55,58 +55,13 @@
 
 (rule
  (targets
-  (dir cmis))
+  (dir _opam))
  (action
-  (system "mkdir -p cmis; cp %{ocaml_where}/*.cmi cmis")))
-
-(rule
- (targets
-  (dir lib))
- (deps mklib.sh)
- (action
-  (system "./mklib.sh")))
-
-(rule
- (targets worker.js)
- (deps stubs.js)
- (action
-  (run
-   %{bin:js_of_ocaml}
-   --toplevel
-   ; --pretty
-   --no-cmis
-   --effects=cps
-   +toplevel.js
-   +dynlink.js
-   +bigstringaf/runtime.js
-   stubs.js
-   %{dep:worker.bc}
-   -o
-   %{targets})))
-
-(rule
- (targets worker_nocmis.js)
- (deps stubs.js)
- (action
-  (run
-   %{bin:js_of_ocaml}
-   --toplevel
-   --pretty
-   --no-cmis
-   ;  --effects=double-translation
-   +toplevel.js
-   +dynlink.js
-   +bigstringaf/runtime.js
-   stubs.js
-   %{dep:worker.bc}
-   -o
-   %{targets})))
+  (run jtw opam -o _opam stringext)))
 
 (alias
  (name default)
  (deps
-  worker.js
-  worker_nocmis.js
   index.html
   example.bc.js
   example2.bc.js
@@ -115,7 +70,6 @@
   index2.html
   index3.html
   index4.html
-  cmis
-  lib
+  _opam
   server.py
   (alias_rec all)))

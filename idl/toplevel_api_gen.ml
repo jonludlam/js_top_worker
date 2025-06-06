@@ -1971,9 +1971,8 @@ include
   end[@@ocaml.doc "@inline"][@@merlin.hide ]
 type init_config =
   {
-  findlib_index: string [@ocaml.doc " URL to the findlib index file "];
   findlib_requires: string list [@ocaml.doc " Findlib packages to require "];
-  stdlib_dcs: string
+  stdlib_dcs: string option
     [@ocaml.doc " URL to the dynamic cmis for the OCaml standard library "];
   execute: bool
     [@ocaml.doc " Whether this session should support execution or not. "]}
@@ -1981,17 +1980,7 @@ type init_config =
 include
   struct
     let _ = fun (_ : init_config) -> ()
-    let rec init_config_findlib_index : (_, init_config) Rpc.Types.field =
-      {
-        Rpc.Types.fname = "findlib_index";
-        Rpc.Types.field = (let open Rpc.Types in Basic String);
-        Rpc.Types.fdefault = None;
-        Rpc.Types.fdescription = ["URL to the findlib index file"];
-        Rpc.Types.fversion = None;
-        Rpc.Types.fget = (fun _r -> _r.findlib_index);
-        Rpc.Types.fset = (fun v _s -> { _s with findlib_index = v })
-      }
-    and init_config_findlib_requires : (_, init_config) Rpc.Types.field =
+    let rec init_config_findlib_requires : (_, init_config) Rpc.Types.field =
       {
         Rpc.Types.fname = "findlib_requires";
         Rpc.Types.field =
@@ -2005,7 +1994,8 @@ include
     and init_config_stdlib_dcs : (_, init_config) Rpc.Types.field =
       {
         Rpc.Types.fname = "stdlib_dcs";
-        Rpc.Types.field = (let open Rpc.Types in Basic String);
+        Rpc.Types.field =
+          (Rpc.Types.Option (let open Rpc.Types in Basic String));
         Rpc.Types.fdefault = None;
         Rpc.Types.fdescription =
           ["URL to the dynamic cmis for the OCaml standard library"];
@@ -2028,8 +2018,7 @@ include
       Rpc.Types.Struct
         ({
            Rpc.Types.fields =
-             [Rpc.Types.BoxedField init_config_findlib_index;
-             Rpc.Types.BoxedField init_config_findlib_requires;
+             [Rpc.Types.BoxedField init_config_findlib_requires;
              Rpc.Types.BoxedField init_config_stdlib_dcs;
              Rpc.Types.BoxedField init_config_execute];
            Rpc.Types.sname = "init_config";
@@ -2042,7 +2031,8 @@ include
                     >>=
                     (fun init_config_execute ->
                        (getter.Rpc.Types.field_get "stdlib_dcs"
-                          (let open Rpc.Types in Basic String))
+                          (Rpc.Types.Option
+                             (let open Rpc.Types in Basic String)))
                          >>=
                          (fun init_config_stdlib_dcs ->
                             (getter.Rpc.Types.field_get "findlib_requires"
@@ -2050,19 +2040,13 @@ include
                                   (let open Rpc.Types in Basic String)))
                               >>=
                               (fun init_config_findlib_requires ->
-                                 (getter.Rpc.Types.field_get "findlib_index"
-                                    (let open Rpc.Types in Basic String))
-                                   >>=
-                                   (fun init_config_findlib_index ->
-                                      return
-                                        {
-                                          findlib_index =
-                                            init_config_findlib_index;
-                                          findlib_requires =
-                                            init_config_findlib_requires;
-                                          stdlib_dcs = init_config_stdlib_dcs;
-                                          execute = init_config_execute
-                                        })))))
+                                 return
+                                   {
+                                     findlib_requires =
+                                       init_config_findlib_requires;
+                                     stdlib_dcs = init_config_stdlib_dcs;
+                                     execute = init_config_execute
+                                   }))))
          } : init_config Rpc.Types.structure)
     and init_config =
       {
@@ -2070,8 +2054,7 @@ include
         Rpc.Types.description = [];
         Rpc.Types.ty = typ_of_init_config
       }
-    let _ = init_config_findlib_index
-    and _ = init_config_findlib_requires
+    let _ = init_config_findlib_requires
     and _ = init_config_stdlib_dcs
     and _ = init_config_execute
     and _ = typ_of_init_config

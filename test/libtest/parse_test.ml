@@ -1,13 +1,11 @@
-
 let triple f1 f2 f3 ppf (v1, v2, v3) =
   Format.fprintf ppf "(%a,%a,%a)" f1 v1 f2 v2 f3 v3
-let fmt = Fmt.Dump.(list (triple string string (list string)))
 
-let print phr =
-  Format.printf "%a" fmt phr
+let fmt = Fmt.Dump.(list (triple string string (list string)))
+let print phr = Format.printf "%a" fmt phr
 
 let check phrase =
-  let output = snd (Js_top_worker.Impl.mangle_toplevel true phrase []) in 
+  let output = snd (Js_top_worker.Impl.mangle_toplevel true phrase []) in
   print_endline "input:";
   Printf.printf "{|%s|}\n" phrase;
   print_endline "output:";
@@ -18,7 +16,8 @@ let check phrase =
 
 let%expect_test _ =
   check "# foo;; junk\n  bar\n# baz;;\n  moo\n# unterminated;; foo\n";
-  [%expect{xxx|
+  [%expect
+    {xxx|
     input:
     {|# foo;; junk
       bar
@@ -44,7 +43,8 @@ let%expect_test _ =
 
 let%expect_test _ =
   check "# 1+2;;\n- 3 : int\n  \n";
-  [%expect{xxx|
+  [%expect
+    {xxx|
     input:
     {|# 1+2;;
     - 3 : int
@@ -61,10 +61,11 @@ let%expect_test _ =
     ..
     |}
     |xxx}]
-  
+
 let%expect_test _ =
   check "# 1+2;;";
-  [%expect{xxx|
+  [%expect
+    {xxx|
     input:
     {|# 1+2;;|}
     output:
@@ -75,7 +76,8 @@ let%expect_test _ =
 
 let%expect_test _ =
   check "# 1+2;;\nx\n";
-  [%expect{xxx|
+  [%expect
+    {xxx|
     input:
     {|# 1+2;;
     x
@@ -92,46 +94,39 @@ let%expect_test _ =
 
 let%expect_test _ =
   check "# let ;;\n  foo";
-  [%expect " 
- fallback parser
- Got phrase
- input:
- {|# let ;;
-   foo|}
- output:
- {|  let ;;
-      |}
- output mapped:
- {|..let.;;
- .....|}
- "]
+  [%expect
+    " \n\
+    \ fallback parser\n\
+    \ Got phrase\n\
+    \ input:\n\
+    \ {|# let ;;\n\
+    \   foo|}\n\
+    \ output:\n\
+    \ {|  let ;;\n\
+    \      |}\n\
+    \ output mapped:\n\
+    \ {|..let.;;\n\
+    \ .....|}\n\
+    \ "]
 
-  
 let%expect_test _ =
   check "# let x=1;;\n  foo\n\n# let y=2;;\n  bar\n\n";
-  [%expect " 
- input:
- {|# let x=1;;
-   foo
-
- # let y=2;;
-   bar
-
- |}
- output:
- {|  let x=1;;
-
-
-   let y=2;;
-
-
- |}
- output mapped:
- {|..let.x=1;;
- .....
-
- ..let.y=2;;
- .....
-
- |}
- "]
+  [%expect
+    " \n\
+    \ input:\n\
+    \ {|# let x=1;;\n\
+    \   foo\n\n\
+    \ # let y=2;;\n\
+    \   bar\n\n\
+    \ |}\n\
+    \ output:\n\
+    \ {|  let x=1;;\n\n\n\
+    \   let y=2;;\n\n\n\
+    \ |}\n\
+    \ output mapped:\n\
+    \ {|..let.x=1;;\n\
+    \ .....\n\n\
+    \ ..let.y=2;;\n\
+    \ .....\n\n\
+    \ |}\n\
+    \ "]

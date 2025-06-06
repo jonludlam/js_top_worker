@@ -9,53 +9,64 @@ let modname_of_id id = "Cell__" ^ id
 
 let is_mangled_broken orig src =
   String.length orig <> String.length src
-  || 
-    Seq.exists2 (fun c c' ->
-      c <> c' && c' <> ' ') (String.to_seq orig) (String.to_seq src)
+  || Seq.exists2
+       (fun c c' -> c <> c' && c' <> ' ')
+       (String.to_seq orig) (String.to_seq src)
 
 let mangle_toplevel is_toplevel orig_source deps =
   let src =
-    if not is_toplevel then
-      orig_source
+    if not is_toplevel then orig_source
+    else if
+      String.length orig_source < 2
+      || orig_source.[0] <> '#'
+      || orig_source.[1] <> ' '
+    then (
+      Logs.err (fun m ->
+          m "xx Warning, ignoring toplevel block without a leading '# '.\n%!");
+      orig_source)
     else
-      if
-        String.length orig_source < 2 || orig_source.[0] <> '#' || orig_source.[1] <> ' '
-      then (Logs.err (fun m -> m "xx Warning, ignoring toplevel block without a leading '# '.\n%!"); orig_source)
-      else begin
-        try
-          let s = String.sub orig_source 2 (String.length orig_source - 2) in
-          let list =
-            try Ocamltop.parse_toplevel s with _ -> Ocamltop.fallback_parse_toplevel s in
-          let lines =List.map (fun (phr, junk, output) ->
-            let l1 = Printf.sprintf "  %s%s" phr (String.make (String.length junk) ' ') in
-            match output with
-            | [] -> l1
-            | _ ->
-              let s = List.map (fun x ->
-                String.make (String.length x) ' ') output
+      try
+        let s = String.sub orig_source 2 (String.length orig_source - 2) in
+        let list =
+          try Ocamltop.parse_toplevel s
+          with _ -> Ocamltop.fallback_parse_toplevel s
+        in
+        let lines =
+          List.map
+            (fun (phr, junk, output) ->
+              let l1 =
+                Printf.sprintf "  %s%s" phr
+                  (String.make (String.length junk) ' ')
               in
-              (String.concat "\n" (l1 :: s));
-            ) list in
-          String.concat "\n" lines
-        with e ->
-          Logs.err (fun m -> m "Error in mangle_toplevel: %s" (Printexc.to_string e));
-          let ppf = Format.err_formatter in
-          let _ = Location.report_exception ppf e in
-          orig_source
-        end
+              match output with
+              | [] -> l1
+              | _ ->
+                  let s =
+                    List.map (fun x -> String.make (String.length x) ' ') output
+                  in
+                  String.concat "\n" (l1 :: s))
+            list
+        in
+        String.concat "\n" lines
+      with e ->
+        Logs.err (fun m ->
+            m "Error in mangle_toplevel: %s" (Printexc.to_string e));
+        let ppf = Format.err_formatter in
+        let _ = Location.report_exception ppf e in
+        orig_source
   in
-  let line1 = List.map (fun id ->
-    Printf.sprintf "open %s" (modname_of_id id)) deps |> String.concat " " in
+  let line1 =
+    List.map (fun id -> Printf.sprintf "open %s" (modname_of_id id)) deps
+    |> String.concat " "
+  in
   let line1 = line1 ^ ";;\n" in
   Logs.debug (fun m -> m "Line1: %s\n%!" line1);
   Logs.debug (fun m -> m "Source: %s\n%!" src);
-  if is_mangled_broken orig_source src
-  then (
+  if is_mangled_broken orig_source src then (
     Printf.printf "Warning: mangled source is broken\n%!";
     Printf.printf "orig length: %d\n%!" (String.length orig_source);
-    Printf.printf "src length: %d\n%!" (String.length src);
-  );
-  line1, src
+    Printf.printf "src length: %d\n%!" (String.length src));
+  (line1, src)
 
 module JsooTopPpx = struct
   open Js_of_ocaml_compiler.Stdlib
@@ -96,7 +107,9 @@ module type S = sig
   val init_function : string -> unit -> unit
   val get_stdlib_dcs : string -> Toplevel_api_gen.dynamic_cmis list
   val findlib_init : string -> findlib_t
-  val require : bool -> findlib_t -> string list -> Toplevel_api_gen.dynamic_cmis list
+
+  val require :
+    bool -> findlib_t -> string list -> Toplevel_api_gen.dynamic_cmis list
 end
 
 module Make (S : S) = struct
@@ -260,7 +273,7 @@ module Make (S : S) = struct
     Printf.sprintf "%s.cmi" (String.uncapitalize_ascii unit_name)
 
   let get_dirs () =
-    let {Load_path.visible; hidden} = Load_path.get_paths () in
+    let { Load_path.visible; hidden } = Load_path.get_paths () in
     visible @ hidden
 
   let reset_dirs () =
@@ -348,9 +361,13 @@ module Make (S : S) = struct
 
       path := Some "/static/cmis";
 
-      findlib_v := Some (S.findlib_init init_libs.findlib_index);
-
-      (match S.get_stdlib_dcs init_libs.stdlib_dcs with
+      findlib_v := Some (S.findlib_init "findlib_index");
+      let stdlib_dcs =
+        match init_libs.stdlib_dcs with
+        | Some dcs -> dcs
+        | None -> "lib/ocaml/dynamic_cmis.json"
+      in
+      (match S.get_stdlib_dcs stdlib_dcs with
       | [ dcs ] -> add_dynamic_cmis dcs
       | _ -> ());
       Clflags.no_check_prims := true;
@@ -388,7 +405,9 @@ module Make (S : S) = struct
       in
 
       let dcs =
-        match !findlib_v with Some v -> S.require (not !execution_allowed) v !requires | None -> []
+        match !findlib_v with
+        | Some v -> S.require (not !execution_allowed) v !requires
+        | None -> []
       in
       List.iter add_dynamic_cmis dcs;
 
@@ -483,7 +502,8 @@ module Make (S : S) = struct
              Symtable.check_global_initialized reloc;
              Symtable.update_global_table(); *)
           let oc = open_out "/tmp/test.cmo" in
-          Emitcode.marshal_to_channel_with_possibly_32bit_compat ~filename:"/tmp/test.cmo" ~kind:"bytecode unit" oc cmo;
+          Emitcode.marshal_to_channel_with_possibly_32bit_compat
+            ~filename:"/tmp/test.cmo" ~kind:"bytecode unit" oc cmo;
 
           (* let code = String.init (Misc.LongString.length code) ~f:(fun i -> Misc.LongString.get code i) in *)
           close_out oc;
@@ -511,7 +531,8 @@ module Make (S : S) = struct
     then (
       Printf.eprintf
         "Warning, ignoring toplevel block without a leading '# '.\n";
-      IdlM.ErrM.return { Toplevel_api_gen.script = stripped; mime_vals = []; parts=[] })
+      IdlM.ErrM.return
+        { Toplevel_api_gen.script = stripped; mime_vals = []; parts = [] })
     else
       let s = String.sub stripped 2 (String.length stripped - 2) in
       let list = Ocamltop.parse_toplevel s in
@@ -540,11 +561,14 @@ module Make (S : S) = struct
       let content_txt =
         String.sub content_txt 0 (String.length content_txt - 1)
       in
-      let result = { Toplevel_api_gen.script = content_txt; mime_vals; parts=[] } in
+      let result =
+        { Toplevel_api_gen.script = content_txt; mime_vals; parts = [] }
+      in
       IdlM.ErrM.return result
 
   let exec_toplevel (phrase : string) =
-    try handle_toplevel phrase with e -> 
+    try handle_toplevel phrase
+    with e ->
       Logs.info (fun m -> m "Error: %s" (Printexc.to_string e));
       IdlM.ErrM.return_err
         (Toplevel_api_gen.InternalError (Printexc.to_string e))
@@ -659,62 +683,60 @@ module Make (S : S) = struct
         Some (from, to_, wdispatch source query)
   end
 
-    module StringSet = Set.Make (String)
+  module StringSet = Set.Make (String)
+
   let failed_cells = ref StringSet.empty
 
-
-
   let complete_prefix _id _deps is_toplevel source position =
-    try begin
-    let line1, src = mangle_toplevel is_toplevel source [] in
-    let src= line1 ^ src in
-    let source = Merlin_kernel.Msource.make src in
-    let map_kind :
-        [ `Value
-        | `Constructor
-        | `Variant
-        | `Label
-        | `Module
-        | `Modtype
-        | `Type
-        | `MethodCall
-        | `Keyword ] ->
-        Toplevel_api_gen.kind_ty = function
-      | `Value -> Value
-      | `Constructor -> Constructor
-      | `Variant -> Variant
-      | `Label -> Label
-      | `Module -> Module
-      | `Modtype -> Modtype
-      | `Type -> Type
-      | `MethodCall -> MethodCall
-      | `Keyword -> Keyword
-    in
-    let position =
-      match position with
-      | Toplevel_api_gen.Start -> `Offset (String.length line1)
-      | Offset x -> `Offset (x + String.length line1)
-      | Logical (x, y) -> `Logical (x + 1, y)
-      | End -> `End
-    in
-    match Completion.at_pos source position with
-    | Some (from, to_, compl) ->
-        let entries =
-          List.map
-            (fun (entry : Query_protocol.Compl.entry) ->
-              {
-                Toplevel_api_gen.name = entry.name;
-                kind = map_kind entry.kind;
-                desc = entry.desc;
-                info = entry.info;
-                deprecated = entry.deprecated;
-              })
-            compl.entries
-        in
-        IdlM.ErrM.return { Toplevel_api_gen.from; to_; entries }
-    | None ->
-        IdlM.ErrM.return { Toplevel_api_gen.from = 0; to_ = 0; entries = [] }
-    end
+    try
+      let line1, src = mangle_toplevel is_toplevel source [] in
+      let src = line1 ^ src in
+      let source = Merlin_kernel.Msource.make src in
+      let map_kind :
+          [ `Value
+          | `Constructor
+          | `Variant
+          | `Label
+          | `Module
+          | `Modtype
+          | `Type
+          | `MethodCall
+          | `Keyword ] ->
+          Toplevel_api_gen.kind_ty = function
+        | `Value -> Value
+        | `Constructor -> Constructor
+        | `Variant -> Variant
+        | `Label -> Label
+        | `Module -> Module
+        | `Modtype -> Modtype
+        | `Type -> Type
+        | `MethodCall -> MethodCall
+        | `Keyword -> Keyword
+      in
+      let position =
+        match position with
+        | Toplevel_api_gen.Start -> `Offset (String.length line1)
+        | Offset x -> `Offset (x + String.length line1)
+        | Logical (x, y) -> `Logical (x + 1, y)
+        | End -> `End
+      in
+      match Completion.at_pos source position with
+      | Some (from, to_, compl) ->
+          let entries =
+            List.map
+              (fun (entry : Query_protocol.Compl.entry) ->
+                {
+                  Toplevel_api_gen.name = entry.name;
+                  kind = map_kind entry.kind;
+                  desc = entry.desc;
+                  info = entry.info;
+                  deprecated = entry.deprecated;
+                })
+              compl.entries
+          in
+          IdlM.ErrM.return { Toplevel_api_gen.from; to_; entries }
+      | None ->
+          IdlM.ErrM.return { Toplevel_api_gen.from = 0; to_ = 0; entries = [] }
     with e ->
       Logs.info (fun m -> m "Error: %s" (Printexc.to_string e));
       IdlM.ErrM.return_err
@@ -734,7 +756,7 @@ module Make (S : S) = struct
     let oc = open_out filename in
     Printf.fprintf oc "%s" source;
     close_out oc;
-    (try Sys.remove (prefix ^ ".cmi") with | Sys_error _ -> ());
+    (try Sys.remove (prefix ^ ".cmi") with Sys_error _ -> ());
     let unit_info = Unit_info.make ~source_file:filename prefix in
     try
       let store = Local_store.fresh () in
@@ -751,35 +773,39 @@ module Make (S : S) = struct
       (* reset_dirs () *) ()
     with
     | Env.Error e ->
-      Logs.err (fun m -> m "Env.Error: %a" Env.report_error e);
-      failed_cells := StringSet.add id !failed_cells;
-      ()
+        Logs.err (fun m -> m "Env.Error: %a" Env.report_error e);
+        failed_cells := StringSet.add id !failed_cells;
+        ()
     | exn ->
-      let s = Printexc.to_string exn in
-      Logs.err (fun m -> m "Error in add_cmi: %s" s);
-      Logs.err (fun m -> m "Backtrace: %s" (Printexc.get_backtrace ()));
-      let ppf = Format.err_formatter in
-      let _ = Location.report_exception ppf exn in
-      failed_cells := StringSet.add id !failed_cells;
-      ()
-  
+        let s = Printexc.to_string exn in
+        Logs.err (fun m -> m "Error in add_cmi: %s" s);
+        Logs.err (fun m -> m "Backtrace: %s" (Printexc.get_backtrace ()));
+        let ppf = Format.err_formatter in
+        let _ = Location.report_exception ppf exn in
+        failed_cells := StringSet.add id !failed_cells;
+        ()
 
   let map_pos line1 pos =
-                Lexing.{ pos with
-                  pos_bol = pos.pos_bol - String.length line1;
-                    pos_lnum = pos.pos_lnum - 1;
-                    pos_cnum = pos.pos_cnum - String.length line1;
-                  }
+    Lexing.
+      {
+        pos with
+        pos_bol = pos.pos_bol - String.length line1;
+        pos_lnum = pos.pos_lnum - 1;
+        pos_cnum = pos.pos_cnum - String.length line1;
+      }
 
   let map_loc line1 (loc : Ocaml_parsing.Location.t) =
-                  { loc with
-                 Ocaml_utils.Warnings.loc_start = map_pos line1 loc.loc_start;
-                  Ocaml_utils.Warnings.loc_end = map_pos line1 loc.loc_end;
-                }
+    {
+      loc with
+      Ocaml_utils.Warnings.loc_start = map_pos line1 loc.loc_start;
+      Ocaml_utils.Warnings.loc_end = map_pos line1 loc.loc_end;
+    }
 
   let query_errors id deps is_toplevel orig_source =
     try
-      let deps = List.filter (fun dep -> not (StringSet.mem dep !failed_cells)) deps in
+      let deps =
+        List.filter (fun dep -> not (StringSet.mem dep !failed_cells)) deps
+      in
       (* Logs.info (fun m -> m "About to mangle toplevel"); *)
       let line1, src = mangle_toplevel is_toplevel orig_source deps in
       let id = Option.get id in
@@ -798,24 +824,27 @@ module Make (S : S) = struct
                  Ocaml_parsing.Location.print_sub_msg Format.str_formatter sub;
                  String.trim (Format.flush_str_formatter ())
                in
-               let loc = map_loc line1 (Ocaml_parsing.Location.loc_of_report error) in
+               let loc =
+                 map_loc line1 (Ocaml_parsing.Location.loc_of_report error)
+               in
 
                let main =
                  Format.asprintf "@[%a@]" Ocaml_parsing.Location.print_main
                    error
                  |> String.trim
                in
-               if loc.loc_start.pos_lnum = 0 then None else Some
-               {
-                 Toplevel_api_gen.kind;
-                 loc;
-                 main;
-                 sub = StdLabels.List.map ~f:of_sub sub;
-                 source;
-               })
+               if loc.loc_start.pos_lnum = 0 then None
+               else
+                 Some
+                   {
+                     Toplevel_api_gen.kind;
+                     loc;
+                     main;
+                     sub = StdLabels.List.map ~f:of_sub sub;
+                     source;
+                   })
       in
-      if List.length errors = 0 then
-        add_cmi id deps src;
+      if List.length errors = 0 then add_cmi id deps src;
       (* Logs.info (fun m -> m "Got to end"); *)
       IdlM.ErrM.return errors
     with e ->
@@ -825,14 +854,16 @@ module Make (S : S) = struct
 
   let type_enclosing _id deps is_toplevel orig_source position =
     try
-      let deps = List.filter (fun dep -> not (StringSet.mem dep !failed_cells)) deps in
+      let deps =
+        List.filter (fun dep -> not (StringSet.mem dep !failed_cells)) deps
+      in
       let line1, src = mangle_toplevel is_toplevel orig_source deps in
       let src = line1 ^ src in
       let position =
         match position with
         | Toplevel_api_gen.Start -> `Start
         | Offset x -> `Offset (x + String.length line1)
-        | Logical (x, y) -> `Logical (x+1, y)
+        | Logical (x, y) -> `Logical (x + 1, y)
         | End -> `End
       in
       let source = Merlin_kernel.Msource.make src in
@@ -849,7 +880,8 @@ module Make (S : S) = struct
       in
       let enclosing =
         List.map
-          (fun (x, y, z) -> (map_loc line1 x, map_index_or_string y, map_tail_position z))
+          (fun (x, y, z) ->
+            (map_loc line1 x, map_index_or_string y, map_tail_position z))
           enclosing
       in
       IdlM.ErrM.return enclosing
@@ -857,5 +889,4 @@ module Make (S : S) = struct
       Logs.info (fun m -> m "Error: %s" (Printexc.to_string e));
       IdlM.ErrM.return_err
         (Toplevel_api_gen.InternalError (Printexc.to_string e))
-
 end

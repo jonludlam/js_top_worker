@@ -12,8 +12,7 @@ let initialise s callback =
     W.init rpc
       Toplevel_api_gen.
         {
-          stdlib_dcs = "/lib/ocaml/dynamic_cmis.json";
-          findlib_index = "/lib/findlib_index";
+          stdlib_dcs = None;
           findlib_requires = [ "stringext" ];
           execute = true;
         }
@@ -40,7 +39,7 @@ let log_output (o : Toplevel_api_gen.exec_result) =
 
 let _ =
   let ( let* ) = Lwt_result.bind in
-  let* rpc = initialise "worker.js" (fun _ -> log "Timeout") in
+  let* rpc = initialise "_opam/worker.js" (fun _ -> log "Timeout") in
   let* o = W.setup rpc () in
   log_output o;
   let* o = W.exec rpc "Stringext.of_list ['a';'b';'c'];;" in

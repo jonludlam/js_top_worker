@@ -10,7 +10,7 @@ function include(filename){
 
 function importScripts(filename){
     console.log('importScripts: ' + filename);
-	filename='./'+filename;
+	filename='./_opam/'+filename;
 	include(filename);
 }
 

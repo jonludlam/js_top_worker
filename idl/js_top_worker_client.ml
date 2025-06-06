@@ -97,6 +97,7 @@ module W : sig
     bool ->
     string ->
     (Toplevel_api_gen.error list, Toplevel_api_gen.err) result Lwt.t
+
   val compile_js :
     rpc ->
     string option ->
@@ -111,7 +112,9 @@ end = struct
   let setup rpc a = Wraw.setup rpc a |> Rpc_lwt.T.get
   let typecheck rpc a = Wraw.typecheck rpc a |> Rpc_lwt.T.get
   let exec rpc a = Wraw.exec rpc a |> Rpc_lwt.T.get
+
   let query_errors rpc id deps is_toplevel doc =
     Wraw.query_errors rpc id deps is_toplevel doc |> Rpc_lwt.T.get
+
   let compile_js rpc id s = Wraw.compile_js rpc id s |> Rpc_lwt.T.get
 end

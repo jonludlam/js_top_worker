@@ -3,7 +3,17 @@
  (modes byte)
  (modules node_test)
  (link_flags (-linkall))
- (libraries fpath js_of_ocaml js_top_worker-web js_of_ocaml-toplevel js_top_worker logs logs.fmt rpclib.core rpclib.json findlib.top))
+ (libraries
+  fpath
+  js_of_ocaml
+  js_top_worker-web
+  js_of_ocaml-toplevel
+  js_top_worker
+  logs
+  logs.fmt
+  rpclib.core
+  rpclib.json
+  findlib.top))
 
 (rule
  (targets node_test.js)
@@ -26,20 +36,22 @@
 
 (rule
  (targets
-  (dir lib))
- (deps mklib.sh)
+  (dir _opam))
  (action
-  (system "./mklib.sh")))
+  (run jtw opam astring --no-worker -o _opam)))
 
 (rule
- (with-outputs-to node_test.out
+ (with-outputs-to
+  node_test.out
   (run
-   node --stack-size=2000 -r ./%{dep:import_scripts.js} %{dep:node_test.js})))
+   node
+   --stack-size=2000
+   -r
+   ./%{dep:import_scripts.js}
+   %{dep:node_test.js})))
 
 (rule
  (alias runtest)
- (action (diff node_test.expected node_test.out)))
-
-
-
-
+ (deps _opam)
+ (action
+  (diff node_test.expected node_test.out)))

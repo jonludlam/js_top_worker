@@ -1,0 +1,15 @@
+(executable
+ (name jtw)
+ (public_name jtw)
+ (package js_top_worker)
+ (libraries
+  eio
+  eio_main
+  bos
+  opam-format
+  findlib
+  logs
+  logs.fmt
+  js_top_worker-rpc
+  rpclib.json
+  cmdliner))

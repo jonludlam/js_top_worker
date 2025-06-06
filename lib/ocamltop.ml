@@ -17,9 +17,10 @@ let fallback_parse_toplevel s =
     Printf.printf "Got phrase\n%!";
     let new_pos = Lexing.lexeme_end lexbuf in
     let phr = String.sub s pos (new_pos - pos) in
-    let (junk, (cont, output)) = Toplexer.entry lexbuf in
+    let junk, (cont, output) = Toplexer.entry lexbuf in
     let new_pos = Lexing.lexeme_end lexbuf in
-    if cont then (phr, junk, output) :: loop new_pos else [ (phr, junk, output) ]
+    if cont then (phr, junk, output) :: loop new_pos
+    else [ (phr, junk, output) ]
   in
   loop 0
 
@@ -29,8 +30,9 @@ let parse_toplevel s =
     let _phr = !Toploop.parse_toplevel_phrase lexbuf in
     let new_pos = Lexing.lexeme_end lexbuf in
     let phr = String.sub s pos (new_pos - pos) in
-    let (junk, (cont, output)) = Toplexer.entry lexbuf in
+    let junk, (cont, output) = Toplexer.entry lexbuf in
     let new_pos = Lexing.lexeme_end lexbuf in
-    if cont then (phr, junk, output) :: loop new_pos else [ (phr, junk, output) ]
+    if cont then (phr, junk, output) :: loop new_pos
+    else [ (phr, junk, output) ]
   in
   loop 0

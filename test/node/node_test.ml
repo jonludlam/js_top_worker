@@ -3,45 +3,35 @@ open Js_top_worker
 open Impl
 
 let capture : (unit -> 'a) -> unit -> Impl.captured * 'a =
-   fun f () ->
-    let stdout_buff = Buffer.create 1024 in
-    let stderr_buff = Buffer.create 1024 in
-    Js_of_ocaml.Sys_js.set_channel_flusher stdout
-      (Buffer.add_string stdout_buff);
+ fun f () ->
+  let stdout_buff = Buffer.create 1024 in
+  let stderr_buff = Buffer.create 1024 in
+  Js_of_ocaml.Sys_js.set_channel_flusher stdout (Buffer.add_string stdout_buff);
 
-    let x = f () in
-    let captured =
-      {
-        Impl.stdout = Buffer.contents stdout_buff;
-        stderr = Buffer.contents stderr_buff;
-      }
-    in
-    (captured, x)
-
-let _handle_findlib_error = function
-  | Failure msg -> Printf.fprintf stderr "%s" msg
-  | Fl_package_base.No_such_package (pkg, reason) ->
-      Printf.fprintf stderr "No such package: %s%s\n" pkg
-        (if reason <> "" then " - " ^ reason else "")
-  | Fl_package_base.Package_loop pkg ->
-      Printf.fprintf stderr "Package requires itself: %s\n" pkg
-  | exn -> raise exn
+  let x = f () in
+  let captured =
+    {
+      Impl.stdout = Buffer.contents stdout_buff;
+      stderr = Buffer.contents stderr_buff;
+    }
+  in
+  (captured, x)
 
 module Server = Js_top_worker_rpc.Toplevel_api_gen.Make (Impl.IdlM.GenServer ())
 
 module S : Impl.S = struct
   type findlib_t = Js_top_worker_web.Findlibish.t
 
-
   let capture = capture
+
   let sync_get f =
-    let f = Fpath.v ("./" ^ f) in
+    let f = Fpath.v ("_opam/" ^ f) in
     Logs.info (fun m -> m "sync_get: %a" Fpath.pp f);
-    try
-      Some (In_channel.with_open_bin (Fpath.to_string f) In_channel.input_all)
-  with e ->
-    Logs.err (fun m -> m "Error reading file %a: %s" Fpath.pp f (Printexc.to_string e));
-    None
+    try Some (In_channel.with_open_bin (Fpath.to_string f) In_channel.input_all)
+    with e ->
+      Logs.err (fun m ->
+          m "Error reading file %a: %s" Fpath.pp f (Printexc.to_string e));
+      None
 
   let create_file = Js_of_ocaml.Sys_js.create_file
 
@@ -50,12 +40,14 @@ module S : Impl.S = struct
 
   let init_function _ () = failwith "Not implemented"
   let findlib_init = Js_top_worker_web.Findlibish.init sync_get
-  let get_stdlib_dcs uri = Js_top_worker_web.Findlibish.fetch_dynamic_cmis sync_get uri |> Result.to_list
+
+  let get_stdlib_dcs uri =
+    Js_top_worker_web.Findlibish.fetch_dynamic_cmis sync_get uri
+    |> Result.to_list
 
   let require b v = function
     | [] -> []
     | packages -> Js_top_worker_web.Findlibish.require sync_get b v packages
-
 end
 
 module U = Impl.Make (S)
@@ -83,30 +75,25 @@ let _ =
   let ( let* ) = IdlM.ErrM.bind in
   let init =
     Js_top_worker_rpc.Toplevel_api_gen.
-      {
-        stdlib_dcs = "/lib/ocaml/dynamic_cmis.json";
-        findlib_index = "/lib/findlib_index";
-        findlib_requires = ["stringext"];
-        execute = false;
-      }
+      { stdlib_dcs = None; findlib_requires = [ "stringext" ]; execute = false }
   in
   let x =
     let* _ = Client.init rpc init in
     let* o = Client.setup rpc () in
-    Logs.info (fun m -> m "setup output: %s" (Option.value ~default:"" o.stdout));
+    Logs.info (fun m ->
+        m "setup output: %s" (Option.value ~default:"" o.stdout));
     let* _ =
       Client.query_errors rpc (Some "c1") [] false "typ xxxx = int;;\n"
     in
     let* o1 =
-      Client.query_errors rpc (Some "c2") ["c1"] false "type yyy = xxx;;\n"
+      Client.query_errors rpc (Some "c2") [ "c1" ] false "type yyy = xxx;;\n"
     in
     Logs.info (fun m -> m "Number of errors: %d" (List.length o1));
     let* _ =
       Client.query_errors rpc (Some "c1") [] false "type xxx = int;;\n"
     in
     let* o2 =
-      Client.query_errors rpc (Some "c2") ["c1"] false
-        "type yyy = xxx;;\n"
+      Client.query_errors rpc (Some "c2") [ "c1" ] false "type yyy = xxx;;\n"
     in
     Logs.info (fun m -> m "Number of errors1: %d" (List.length o1));
     Logs.info (fun m -> m "Number of errors2: %d" (List.length o2));

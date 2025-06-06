@@ -129,12 +129,7 @@ let _ =
   let ( let* ) = IdlM.ErrM.bind in
   let init =
     Js_top_worker_rpc.Toplevel_api_gen.
-      {
-        stdlib_dcs = "/lib/ocaml/dynamic_cmis.json";
-        findlib_index = "/lib/findlib_index";
-        findlib_requires = [];
-        execute = true;
-      }
+      { stdlib_dcs = None; findlib_requires = []; execute = true }
   in
   let x =
     let* _ = Client.init rpc init in
@@ -144,15 +139,14 @@ let _ =
       Client.query_errors rpc (Some "c1") [] false "typ xxxx = int;;\n"
     in
     let* o1 =
-      Client.query_errors rpc (Some "c2") ["c1"] false "type yyy = xxx;;\n"
+      Client.query_errors rpc (Some "c2") [ "c1" ] false "type yyy = xxx;;\n"
     in
     Printf.printf "Number of errors: %d\n%!" (List.length o1);
     let* _ =
       Client.query_errors rpc (Some "c1") [] false "type xxx = int;;\n"
     in
     let* o2 =
-      Client.query_errors rpc (Some "c2") ["c1"] false
-        "type yyy = xxx;;\n"
+      Client.query_errors rpc (Some "c2") [ "c1" ] false "type yyy = xxx;;\n"
     in
     Printf.printf "Number of errors1: %d\n%!" (List.length o1);
     Printf.printf "Number of errors2: %d\n%!" (List.length o2);

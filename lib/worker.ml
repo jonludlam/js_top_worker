@@ -55,7 +55,10 @@ module S : Impl.S = struct
 
   let sync_get = Jslib.sync_get
   let create_file = Js_of_ocaml.Sys_js.create_file
-  let get_stdlib_dcs uri = Findlibish.fetch_dynamic_cmis sync_get uri |> Result.to_list
+
+  let get_stdlib_dcs uri =
+    Findlibish.fetch_dynamic_cmis sync_get uri |> Result.to_list
+
   let import_scripts = Js_of_ocaml.Worker.import_scripts
   let findlib_init = Findlibish.init sync_get
 
@@ -71,11 +74,11 @@ end
 
 module M = Impl.Make (S)
 
-let test () = 
+let test () =
   let oc = open_out "/tmp/mytest.txt" in
   Printf.fprintf oc "Hello, world\n%!";
   close_out oc
-  
+
 let run () =
   (* Here we bind the server stub functions to the implementations *)
   let open Js_of_ocaml in
@@ -97,9 +100,9 @@ let run () =
     Server.exec_toplevel exec_toplevel;
     let rpc_fn = Impl.IdlM.server Server.implementation in
     Js_of_ocaml.Worker.set_onmessage (fun x ->
-      let s = Js_of_ocaml.Js.to_string x in
-      Jslib.log "Worker received: %s" s;
-      ignore (server rpc_fn s));
+        let s = Js_of_ocaml.Js.to_string x in
+        Jslib.log "Worker received: %s" s;
+        ignore (server rpc_fn s));
     Console.console##log (Js.string "All finished")
   with e ->
     Console.console##log (Js.string ("Exception: " ^ Printexc.to_string e))

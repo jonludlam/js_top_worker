@@ -50,10 +50,16 @@ module W : sig
   (** Execute a phrase using the toplevel. The toplevel must have been
       initialised first. *)
 
-  val query_errors : rpc -> string option -> string list -> bool -> string -> (Toplevel_api_gen.error list, err) result Lwt.t
+  val query_errors :
+    rpc ->
+    string option ->
+    string list ->
+    bool ->
+    string ->
+    (Toplevel_api_gen.error list, err) result Lwt.t
   (** Query the toplevel for errors. The first argument is the phrase to check
-      for errors. If it is [None], the toplevel will return all errors. If it
-      is [Some s], the toplevel will return only errors related to [s]. *)
+      for errors. If it is [None], the toplevel will return all errors. If it is
+      [Some s], the toplevel will return only errors related to [s]. *)
 
   val compile_js : rpc -> string option -> string -> (string, err) result Lwt.t
 end

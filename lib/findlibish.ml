@@ -148,7 +148,8 @@ let init sync_get findlib_index : t =
       | Error m ->
           Jslib.log "Failed to parse uri: %s" m;
           None)
-    metas |> flatten_libs
+    metas
+  |> flatten_libs
 
 let require sync_get cmi_only v packages =
   let rec require dcss package :

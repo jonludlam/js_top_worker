@@ -184,9 +184,8 @@ type cma = {
 [@@deriving rpcty]
 
 type init_config = {
-  findlib_index : string; (** URL to the findlib index file *)
   findlib_requires : string list; (** Findlib packages to require *)
-  stdlib_dcs : string; (** URL to the dynamic cmis for the OCaml standard library *)
+  stdlib_dcs : string option; (** URL to the dynamic cmis for the OCaml standard library *)
   execute : bool (** Whether this session should support execution or not. *)
 } [@@deriving rpcty]
 type err = InternalError of string [@@deriving rpcty]
