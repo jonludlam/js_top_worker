@@ -101,24 +101,24 @@ type t = library list
 
 let dcs_filename = "dynamic_cmis.json"
 
-let fetch_dynamic_cmis url =
-  match Jslib.sync_get url with
+let fetch_dynamic_cmis sync_get url =
+  match sync_get url with
   | None -> Error (`Msg "Failed to fetch dynamic cmis")
   | Some json ->
       let rpc = Jsonrpc.of_string json in
       Rpcmarshal.unmarshal
         Js_top_worker_rpc.Toplevel_api_gen.typ_of_dynamic_cmis rpc
 
-let init findlib_index : t =
+let init sync_get findlib_index : t =
   let findlib_metas =
-    match Jslib.sync_get findlib_index with
+    match sync_get findlib_index with
     | None -> []
     | Some txt -> Astring.String.fields ~empty:false txt
   in
   let metas =
     List.filter_map
       (fun x ->
-        match Jslib.sync_get x with Some meta -> Some (x, meta) | None -> None)
+        match sync_get x with Some meta -> Some (x, meta) | None -> None)
       findlib_metas
   in
   List.filter_map
@@ -150,7 +150,7 @@ let init findlib_index : t =
           None)
     metas |> flatten_libs
 
-let require cmi_only v packages =
+let require sync_get cmi_only v packages =
   let rec require dcss package :
       Js_top_worker_rpc.Toplevel_api_gen.dynamic_cmis list =
     match List.find (fun lib -> lib.name = package) v with
@@ -170,7 +170,7 @@ let require cmi_only v packages =
           let dcs = Fpath.(dir / dcs_filename |> to_string) in
           let uri = Uri.with_path lib.meta_uri dcs in
           Jslib.log "uri: %s" (Uri.to_string uri);
-          match fetch_dynamic_cmis (Uri.to_string uri) with
+          match fetch_dynamic_cmis sync_get (Uri.to_string uri) with
           | Ok dcs ->
               let () =
                 match lib.archive_name with

@@ -55,13 +55,13 @@ module S : Impl.S = struct
 
   let sync_get = Jslib.sync_get
   let create_file = Js_of_ocaml.Sys_js.create_file
-  let get_stdlib_dcs uri = Findlibish.fetch_dynamic_cmis uri |> Result.to_list
+  let get_stdlib_dcs uri = Findlibish.fetch_dynamic_cmis sync_get uri |> Result.to_list
   let import_scripts = Js_of_ocaml.Worker.import_scripts
-  let findlib_init = Findlibish.init
+  let findlib_init = Findlibish.init sync_get
 
   let require b v = function
     | [] -> []
-    | packages -> Findlibish.require b v packages
+    | packages -> Findlibish.require sync_get b v packages
 
   let init_function func_name =
     let open Js_of_ocaml in

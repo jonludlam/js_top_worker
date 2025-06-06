@@ -3,7 +3,7 @@
  (modes byte)
  (modules node_test)
  (link_flags (-linkall))
- (libraries js_of_ocaml js_of_ocaml-toplevel js_top_worker logs logs.fmt rpclib.core rpclib.json findlib.top))
+ (libraries fpath js_of_ocaml js_top_worker-web js_of_ocaml-toplevel js_top_worker logs logs.fmt rpclib.core rpclib.json findlib.top))
 
 (rule
  (targets node_test.js)
@@ -11,12 +11,35 @@
   (run
    %{bin:js_of_ocaml}
    --toplevel
-   ; --pretty
+   --pretty
    --no-cmis
    --effects=cps
+   --debuginfo
+   --target-env=nodejs
    +toplevel.js
    +dynlink.js
    +bigstringaf/runtime.js
+   +js_top_worker/stubs.js
    %{dep:node_test.bc}
    -o
    %{targets})))
+
+(rule
+ (targets
+  (dir lib))
+ (deps mklib.sh)
+ (action
+  (system "./mklib.sh")))
+
+(rule
+ (with-outputs-to node_test.out
+  (run
+   node --stack-size=2000 -r ./%{dep:import_scripts.js} %{dep:node_test.js})))
+
+(rule
+ (alias runtest)
+ (action (diff node_test.expected node_test.out)))
+
+
+
+

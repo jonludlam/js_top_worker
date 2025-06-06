@@ -357,6 +357,9 @@ module Make (S : S) = struct
 
       requires := init_libs.findlib_requires;
       functions := Some [];
+      execution_allowed := init_libs.execute;
+
+      (* Set up the toplevel environment *)
       Logs.info (fun m -> m "init() finished");
 
       IdlM.ErrM.return ()
@@ -727,11 +730,11 @@ module Make (S : S) = struct
     let filename = modname_of_id id |> String.uncapitalize_ascii in
     let prefix = Printf.sprintf "%s/%s" path filename in
     let filename = Printf.sprintf "%s.ml" prefix in
-    Logs.info (fun m -> m "prefix: %s\n%!" prefix);
+    Logs.info (fun m -> m "prefix: %s" prefix);
     let oc = open_out filename in
     Printf.fprintf oc "%s" source;
     close_out oc;
-    (try Sys.remove (prefix ^ ".cmi") with e -> Logs.err (fun m -> m "Error removing %s: %s" filename (Printexc.to_string e)));
+    (try Sys.remove (prefix ^ ".cmi") with | Sys_error _ -> ());
     let unit_info = Unit_info.make ~source_file:filename prefix in
     try
       let store = Local_store.fresh () in
@@ -744,7 +747,7 @@ module Make (S : S) = struct
         let _ = Typemod.type_implementation unit_info (Compilation_unit.of_string (modname_of_id id)) env ast in
         let b = Sys.file_exists (prefix ^ ".cmi") in
         failed_cells := StringSet.remove id !failed_cells;
-        Logs.info (fun m -> m "file_exists: %s = %b\n%!" (prefix ^ ".cmi") b));
+        Logs.info (fun m -> m "file_exists: %s = %b" (prefix ^ ".cmi") b));
       (* reset_dirs () *) ()
     with
     | Env.Error e ->

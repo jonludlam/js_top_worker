@@ -14,7 +14,7 @@ let initialise s callback =
         {
           stdlib_dcs = "/lib/ocaml/dynamic_cmis.json";
           findlib_index = "/lib/findlib_index";
-          findlib_requires = [ "astring" ];
+          findlib_requires = [ "stringext" ];
           execute = true;
         }
   in
@@ -43,6 +43,6 @@ let _ =
   let* rpc = initialise "worker.js" (fun _ -> log "Timeout") in
   let* o = W.setup rpc () in
   log_output o;
-  let* o = W.exec rpc "Astring.String.fields \"foo bar baz\";;" in
+  let* o = W.exec rpc "Stringext.of_list ['a';'b';'c'];;" in
   log_output o;
   Lwt.return (Ok ())

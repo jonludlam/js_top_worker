@@ -1,0 +1,23 @@
+node_test.js: [INFO] init()
+node_test.js: [INFO] sync_get: ./lib/findlib_index
+node_test.js: [ERROR] Error reading file ./lib/findlib_index: Sys_error("Error: ENOENT: no such file or directory, open '/Users/jon/devel/learno/codemirror3/js_top_worker/_build/default/test/node/lib/findlib_index'")
+node_test.js: [INFO] sync_get: ./lib/ocaml/dynamic_cmis.json
+node_test.js: [ERROR] Error reading file ./lib/ocaml/dynamic_cmis.json: Sys_error("Error: ENOENT: no such file or directory, open '/Users/jon/devel/learno/codemirror3/js_top_worker/_build/default/test/node/lib/ocaml/dynamic_cmis.json'")
+node_test.js: [INFO] init() finished
+node_test.js: [INFO] setup() ...
+error while evaluating #enable "pretty";;
+error while evaluating #disable "shortvar";;
+node_test.js: [INFO] Setup complete
+Package stringext not found
+node_test.js: [INFO] setup() finished
+node_test.js: [INFO] setup output: OCaml version 5.2.0
+Unknown directive enable.
+Unknown directive disable.
+node_test.js: [INFO] Number of errors: 1
+node_test.js: [INFO] add_cmi
+node_test.js: [INFO] prefix: /static/cmis/cell__c1
+node_test.js: [INFO] About to type_implementation
+node_test.js: [INFO] file_exists: /static/cmis/cell__c1.cmi = true
+node_test.js: [INFO] Number of errors1: 1
+node_test.js: [INFO] Number of errors2: 1
+node_test.js: [INFO] Success

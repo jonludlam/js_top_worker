@@ -8,8 +8,7 @@ let capture : (unit -> 'a) -> unit -> Impl.captured * 'a =
     let stderr_buff = Buffer.create 1024 in
     Js_of_ocaml.Sys_js.set_channel_flusher stdout
       (Buffer.add_string stdout_buff);
-    Js_of_ocaml.Sys_js.set_channel_flusher stderr
-      (Buffer.add_string stderr_buff);
+
     let x = f () in
     let captured =
       {
@@ -19,7 +18,7 @@ let capture : (unit -> 'a) -> unit -> Impl.captured * 'a =
     in
     (captured, x)
 
-let handle_findlib_error = function
+let _handle_findlib_error = function
   | Failure msg -> Printf.fprintf stderr "%s" msg
   | Fl_package_base.No_such_package (pkg, reason) ->
       Printf.fprintf stderr "No such package: %s%s\n" pkg
@@ -31,48 +30,35 @@ let handle_findlib_error = function
 module Server = Js_top_worker_rpc.Toplevel_api_gen.Make (Impl.IdlM.GenServer ())
 
 module S : Impl.S = struct
-  type findlib_t = unit
+  type findlib_t = Js_top_worker_web.Findlibish.t
+
 
   let capture = capture
-  let sync_get _ = None
+  let sync_get f =
+    let f = Fpath.v ("./" ^ f) in
+    Logs.info (fun m -> m "sync_get: %a" Fpath.pp f);
+    try
+      Some (In_channel.with_open_bin (Fpath.to_string f) In_channel.input_all)
+  with e ->
+    Logs.err (fun m -> m "Error reading file %a: %s" Fpath.pp f (Printexc.to_string e));
+    None
+
   let create_file = Js_of_ocaml.Sys_js.create_file
 
   let import_scripts urls =
     if List.length urls > 0 then failwith "Not implemented" else ()
 
   let init_function _ () = failwith "Not implemented"
-  let findlib_init _ = ()
-  let get_stdlib_dcs _uri = []
+  let findlib_init = Js_top_worker_web.Findlibish.init sync_get
+  let get_stdlib_dcs uri = Js_top_worker_web.Findlibish.fetch_dynamic_cmis sync_get uri |> Result.to_list
 
-  let require _ () packages =
-    try
-      let eff_packages =
-        Findlib.package_deep_ancestors !Topfind.predicates packages
-      in
-      Topfind.load eff_packages;
-      []
-    with exn ->
-      handle_findlib_error exn;
-      []
+  let require b v = function
+    | [] -> []
+    | packages -> Js_top_worker_web.Findlibish.require sync_get b v packages
+
 end
 
 module U = Impl.Make (S)
-
-(* let test () =
-  let _x = Compmisc.initial_env in
-  let oc = open_out "/tmp/unix_worker.ml" in
-  Printf.fprintf oc "let x=1;;\n";
-  close_out oc;
-  let unit_info = Unit_info.make ~source_file:"/tmp/unix_worker.ml" "/tmp/unix_worker" in
-  try
-    let _ast = Pparse.parse_implementation ~tool_name:"worker" "/tmp/unix_worker.ml" in
-    let _ = Typemod.type_implementation unit_info (Compmisc.initial_env ()) _ast in
-    ()
-  with exn ->
-    Printf.eprintf "error: %s\n%!" (Printexc.to_string exn);
-    let ppf = Format.err_formatter in
-    let _ = Location.report_exception ppf exn in
-    () *)
 
 let start_server () =
   let open U in
@@ -94,28 +80,27 @@ module Client = Js_top_worker_rpc.Toplevel_api_gen.Make (Impl.IdlM.GenClient ())
 
 let _ =
   let rpc = start_server () in
-  Printf.printf "Starting worker...\n%!";
   let ( let* ) = IdlM.ErrM.bind in
   let init =
     Js_top_worker_rpc.Toplevel_api_gen.
       {
         stdlib_dcs = "/lib/ocaml/dynamic_cmis.json";
         findlib_index = "/lib/findlib_index";
-        findlib_requires = [];
-        execute = true;
+        findlib_requires = ["stringext"];
+        execute = false;
       }
   in
   let x =
     let* _ = Client.init rpc init in
     let* o = Client.setup rpc () in
-    Printf.printf "setup output: %s\n%!" (Option.value ~default:"" o.stdout);
+    Logs.info (fun m -> m "setup output: %s" (Option.value ~default:"" o.stdout));
     let* _ =
       Client.query_errors rpc (Some "c1") [] false "typ xxxx = int;;\n"
     in
     let* o1 =
       Client.query_errors rpc (Some "c2") ["c1"] false "type yyy = xxx;;\n"
     in
-    Printf.printf "Number of errors: %d\n%!" (List.length o1);
+    Logs.info (fun m -> m "Number of errors: %d" (List.length o1));
     let* _ =
       Client.query_errors rpc (Some "c1") [] false "type xxx = int;;\n"
     in
@@ -123,10 +108,14 @@ let _ =
       Client.query_errors rpc (Some "c2") ["c1"] false
         "type yyy = xxx;;\n"
     in
-    Printf.printf "Number of errors1: %d\n%!" (List.length o1);
-    Printf.printf "Number of errors2: %d\n%!" (List.length o2);
+    Logs.info (fun m -> m "Number of errors1: %d" (List.length o1));
+    Logs.info (fun m -> m "Number of errors2: %d" (List.length o2));
+    (* let* o3 =
+      Client.exec_toplevel rpc
+        "# Stringext.of_list ['a';'b';'c'];;\n" in
+    Logs.info (fun m -> m "Exec toplevel output: %s" o3.script); *)
     IdlM.ErrM.return ()
   in
   match x |> IdlM.T.get |> M.run with
-  | Ok () -> Printf.printf "Success\n%!"
-  | Error (InternalError s) -> Printf.printf "Error: %s\n%!" s
+  | Ok () -> Logs.info (fun m -> m "Success")
+  | Error (InternalError s) -> Logs.err (fun m -> m "Error: %s" s)
