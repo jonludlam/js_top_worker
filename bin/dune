@@ -1,7 +1,7 @@
 (executable
  (name jtw)
  (public_name jtw)
- (package js_top_worker)
+ (package js_top_worker-bin)
  (libraries
   eio
   eio_main

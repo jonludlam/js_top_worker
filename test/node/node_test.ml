@@ -1,5 +1,6 @@
 (* Unix worker *)
 open Js_top_worker
+open Js_top_worker_rpc.Toplevel_api_gen
 open Impl
 
 let capture : (unit -> 'a) -> unit -> Impl.captured * 'a =
@@ -73,27 +74,24 @@ module Client = Js_top_worker_rpc.Toplevel_api_gen.Make (Impl.IdlM.GenClient ())
 let _ =
   let rpc = start_server () in
   let ( let* ) = IdlM.ErrM.bind in
-  let init =
+  let init_config =
     Js_top_worker_rpc.Toplevel_api_gen.
       { stdlib_dcs = None; findlib_requires = [ "stringext" ]; execute = false }
   in
   let x =
-    let* _ = Client.init rpc init in
-    let* o = Client.setup rpc () in
+    let open Client in
+    let* _ = init rpc init_config in
+    let* o = setup rpc () in
     Logs.info (fun m ->
         m "setup output: %s" (Option.value ~default:"" o.stdout));
-    let* _ =
-      Client.query_errors rpc (Some "c1") [] false "typ xxxx = int;;\n"
-    in
+    let* _ = query_errors rpc (Some "c1") [] false "typ xxxx = int;;\n" in
     let* o1 =
-      Client.query_errors rpc (Some "c2") [ "c1" ] false "type yyy = xxx;;\n"
+      query_errors rpc (Some "c2") [ "c1" ] false "type yyy = xxx;;\n"
     in
     Logs.info (fun m -> m "Number of errors: %d" (List.length o1));
-    let* _ =
-      Client.query_errors rpc (Some "c1") [] false "type xxx = int;;\n"
-    in
+    let* _ = query_errors rpc (Some "c1") [] false "type xxx = int;;\n" in
     let* o2 =
-      Client.query_errors rpc (Some "c2") [ "c1" ] false "type yyy = xxx;;\n"
+      query_errors rpc (Some "c2") [ "c1" ] false "type yyy = xxx;;\n"
     in
     Logs.info (fun m -> m "Number of errors1: %d" (List.length o1));
     Logs.info (fun m -> m "Number of errors2: %d" (List.length o2));

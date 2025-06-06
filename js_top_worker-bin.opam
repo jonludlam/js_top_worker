@@ -1,0 +1,30 @@
+version: "0.0.1"
+opam-version: "2.0"
+maintainer: "jon@recoil.org"
+authors: "various"
+license: "ISC"
+homepage: "https://github.com/jonludlam/js_top_worker"
+bug-reports: "https://github.com/jonludlam/js_top_worker/issues"
+depends: [
+  "eio"
+  "eio_main"
+  "bos"
+  "opam-format"
+  "findlib"
+  "logs"
+  "fmt"
+  "ocaml"
+  "dune" {>= "2.9.1"}
+  "js_of_ocaml" {>= "3.11.0"}
+  "astring"
+  "js_top_worker" {= version}
+  "js_top_worker-rpc" {= version}
+]
+build : [
+  ["dune" "subst"] {pinned}
+  ["dune" "build" "-p" name "-j" jobs]
+]
+synopsis: "JS Toplevel worker web"
+description: """
+An OCaml toplevel designed to run as a web worker
+"""
