@@ -1,5 +1,10 @@
-const worker = new Worker("worker.js")
 
+function getWorkerURL( url ) {
+  const content = `importScripts( "${ url }" );`;
+  return URL.createObjectURL( new Blob( [ content ], { type: "text/javascript" } ) );
+}
+
+const worker = new Worker(getWorkerURL("https://jon-test.ludl.am/_opam/worker.js"))
 
 var promises = new Map()
 var id = 1
@@ -22,7 +27,7 @@ function rpc(method, params) {
 }
 
 function init(cmas,cmi_urls) {
-    return rpc("init",[{init_libs:{cmas,cmi_urls}}])
+    return rpc("init",[{init_libs: {execute: true, findlib_requires:[]}}])
 }
 
 function setup() {

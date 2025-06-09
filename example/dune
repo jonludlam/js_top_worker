@@ -67,9 +67,11 @@
   example2.bc.js
   example3.bc.js
   example4.bc.js
+  example5.js
   index2.html
   index3.html
   index4.html
+  index5.html
   _opam
   server.py
   (alias_rec all)))
