@@ -70,6 +70,8 @@ module S : Impl.S = struct
     let open Js_of_ocaml in
     let func = Js.Unsafe.js_expr func_name in
     fun () -> Js.Unsafe.fun_call func [| Js.Unsafe.inject Dom_html.window |]
+
+  let path = "/static/cmis"
 end
 
 module M = Impl.Make (S)

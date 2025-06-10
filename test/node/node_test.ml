@@ -49,6 +49,8 @@ module S : Impl.S = struct
   let require b v = function
     | [] -> []
     | packages -> Js_top_worker_web.Findlibish.require sync_get b v packages
+  
+  let path = "/tmp"
 end
 
 module U = Impl.Make (S)

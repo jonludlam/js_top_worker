@@ -127,6 +127,8 @@ module S : Impl.S = struct
     with exn ->
       handle_findlib_error exn;
       []
+  
+  let path = "/tmp"
 end
 
 module U = Impl.Make (S)
