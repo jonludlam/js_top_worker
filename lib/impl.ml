@@ -107,6 +107,7 @@ module type S = sig
   val init_function : string -> unit -> unit
   val get_stdlib_dcs : string -> Toplevel_api_gen.dynamic_cmis list
   val findlib_init : string -> findlib_t
+  val path : string
 
   val require :
     bool -> findlib_t -> string list -> Toplevel_api_gen.dynamic_cmis list
@@ -359,7 +360,7 @@ module Make (S : S) = struct
       Logs.info (fun m -> m "init()");
       Language_extension.(set_universe_and_enable_all Universe.Beta);
 
-      path := Some "/static/cmis";
+      path := Some S.path;
 
       findlib_v := Some (S.findlib_init "findlib_index");
       let stdlib_dcs =
@@ -844,7 +845,10 @@ module Make (S : S) = struct
                      source;
                    })
       in
-      if List.length errors = 0 then add_cmi id deps src;
+      (if List.length errors = 0
+      then add_cmi id deps src
+      else failed_cells := StringSet.add id !failed_cells);
+
       (* Logs.info (fun m -> m "Got to end"); *)
       IdlM.ErrM.return errors
     with e ->

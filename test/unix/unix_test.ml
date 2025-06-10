@@ -85,27 +85,14 @@ module S : Impl.S = struct
     with exn ->
       handle_findlib_error exn;
       []
+
+  let path = "/tmp/cmis"
 end
 
 module U = Impl.Make (S)
 
-(* let test () =
-  let _x = Compmisc.initial_env in
-  let oc = open_out "/tmp/unix_worker.ml" in
-  Printf.fprintf oc "let x=1;;\n";
-  close_out oc;
-  let unit_info = Unit_info.make ~source_file:"/tmp/unix_worker.ml" "/tmp/unix_worker" in
-  try
-    let _ast = Pparse.parse_implementation ~tool_name:"worker" "/tmp/unix_worker.ml" in
-    let _ = Typemod.type_implementation unit_info (Compmisc.initial_env ()) _ast in
-    ()
-  with exn ->
-    Printf.eprintf "error: %s\n%!" (Printexc.to_string exn);
-    let ppf = Format.err_formatter in
-    let _ = Location.report_exception ppf exn in
-    () *)
-
 let start_server () =
+  (try Unix.mkdir S.path 0o777 with Unix.Unix_error (Unix.EEXIST, _, _) -> ());
   let open U in
   Logs.set_reporter (Logs_fmt.reporter ());
   Logs.set_level (Some Logs.Info);
@@ -123,6 +110,14 @@ let start_server () =
 
 module Client = Js_top_worker_rpc.Toplevel_api_gen.Make (Impl.IdlM.GenClient ())
 
+let c1, c2, c3, c4 = "c1", "c2", "c3", "c4"
+let notebook = [
+  (c1,[],"typ xxxx = int;;\n");
+  (c2,[c1],"type yyy=xxx;;\n");
+  (c3,[c1;c2],"type xxx = int;;\n");
+  (c4,[c1;c2;c3],"type yyy = xxx;;\n");
+]
+
 let _ =
   let rpc = start_server () in
   Printf.printf "Starting worker...\n%!";
@@ -132,24 +127,17 @@ let _ =
       { stdlib_dcs = None; findlib_requires = []; execute = true }
   in
   let x =
+    let rec run notebook =
+      match notebook with
+      | (id, deps, cell) :: cells ->
+        let* errs = Client.query_errors rpc (Some id) deps false cell in
+        Printf.printf "Cell %s: %d errors\n%!" id (List.length errs);
+        run cells
+      | [] -> IdlM.ErrM.return ()
+    in  
     let* _ = Client.init rpc init in
-    let* o = Client.setup rpc () in
-    Printf.printf "setup output: %s\n%!" (Option.value ~default:"" o.stdout);
-    let* _ =
-      Client.query_errors rpc (Some "c1") [] false "typ xxxx = int;;\n"
-    in
-    let* o1 =
-      Client.query_errors rpc (Some "c2") [ "c1" ] false "type yyy = xxx;;\n"
-    in
-    Printf.printf "Number of errors: %d\n%!" (List.length o1);
-    let* _ =
-      Client.query_errors rpc (Some "c1") [] false "type xxx = int;;\n"
-    in
-    let* o2 =
-      Client.query_errors rpc (Some "c2") [ "c1" ] false "type yyy = xxx;;\n"
-    in
-    Printf.printf "Number of errors1: %d\n%!" (List.length o1);
-    Printf.printf "Number of errors2: %d\n%!" (List.length o2);
+    let* _ = Client.setup rpc () in
+    let* _ = run notebook in
     IdlM.ErrM.return ()
   in
   match x |> IdlM.T.get |> M.run with
