@@ -110,6 +110,7 @@ let fetch_dynamic_cmis sync_get url =
         Js_top_worker_rpc.Toplevel_api_gen.typ_of_dynamic_cmis rpc
 
 let init sync_get findlib_index : t =
+  Jslib.log "Initializing findlib";
   let findlib_metas =
     match sync_get findlib_index with
     | None -> []

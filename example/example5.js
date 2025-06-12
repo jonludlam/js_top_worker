@@ -1,10 +1,10 @@
 
 function getWorkerURL( url ) {
-  const content = `importScripts( "${ url }" );`;
+  const content = `globalThis.__global_rel_url="${ url }"\nimportScripts( "${ url }/worker.js" );`;
   return URL.createObjectURL( new Blob( [ content ], { type: "text/javascript" } ) );
 }
 
-const worker = new Worker(getWorkerURL("https://jon-test.ludl.am/_opam/worker.js"))
+const worker = new Worker(getWorkerURL("http://localhost:8001/_opam"))
 
 var promises = new Map()
 var id = 1
