@@ -4,7 +4,7 @@ function getWorkerURL( url ) {
   return URL.createObjectURL( new Blob( [ content ], { type: "text/javascript" } ) );
 }
 
-const worker = new Worker(getWorkerURL("http://localhost:8001/_opam"))
+const worker = new Worker(getWorkerURL("https://jon-test.ludl.am/_opam"))
 
 var promises = new Map()
 var id = 1

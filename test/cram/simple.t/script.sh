@@ -8,7 +8,7 @@ pid=$!
 
 sleep 1
 
-unix_client init '{ init_libs:[], stdlib_dcs:"", findlib_requires:[], findlib_index:"", cmas:[], cmis:{dynamic_cmis:[], static_cmis:[]}, path:"" }'
+unix_client init '{ findlib_requires:[], execute: true }'
 unix_client setup 
 unix_client exec_toplevel '# Printf.printf "Hello, world\n";;'
 unix_client exec_toplevel "$(cat s1)"

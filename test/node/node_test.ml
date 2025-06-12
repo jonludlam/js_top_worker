@@ -50,7 +50,7 @@ module S : Impl.S = struct
     | [] -> []
     | packages -> Js_top_worker_web.Findlibish.require sync_get b v packages
   
-  let path = "/tmp"
+  let path = "/static/cmis"
 end
 
 module U = Impl.Make (S)
@@ -86,7 +86,7 @@ let _ =
     let* o = setup rpc () in
     Logs.info (fun m ->
         m "setup output: %s" (Option.value ~default:"" o.stdout));
-    let* _ = query_errors rpc (Some "c1") [] false "typ xxxx = int;;\n" in
+    let* _ = query_errors rpc (Some "c1") [] false "type xxxx = int;;\n" in
     let* o1 =
       query_errors rpc (Some "c2") [ "c1" ] false "type yyy = xxx;;\n"
     in

@@ -771,7 +771,7 @@ module Make (S : S) = struct
         let b = Sys.file_exists (prefix ^ ".cmi") in
         failed_cells := StringSet.remove id !failed_cells;
         Logs.info (fun m -> m "file_exists: %s = %b" (prefix ^ ".cmi") b));
-      (* reset_dirs () *) ()
+        Ocaml_typing.Cmi_cache.clear ();
     with
     | Env.Error e ->
         Logs.err (fun m -> m "Env.Error: %a" Env.report_error e);
