@@ -758,7 +758,7 @@ module Make (S : S) = struct
     Printf.fprintf oc "%s" source;
     close_out oc;
     (try Sys.remove (prefix ^ ".cmi") with Sys_error _ -> ());
-    let unit_info = Unit_info.make ~source_file:filename prefix in
+    let unit_info = Unit_info.make ~source_file:filename Impl prefix ~for_pack_prefix:Compilation_unit.Prefix.empty in
     try
       let store = Local_store.fresh () in
       Local_store.with_store store (fun () ->
